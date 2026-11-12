@@ -1,0 +1,36 @@
+name: Build Android app
+on:
+  push:
+    branches: [main]
+    paths: ['index.html', 'live.json', 'android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: Android SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.11.1' }
+      - name: Put the latest game inside the app
+        run: |
+          cp index.html live.json android/app/src/main/assets/
+          python3 android/tools/fonts.py
+      - name: Build
+        env: { VERSION_CODE: '${{ github.run_number }}' }
+        run: gradle -p android --no-daemon bundleRelease assembleDebug
+      - name: Save the app files to the android-builds branch
+        run: |
+          mkdir -p /tmp/out
+          cp android/app/build/outputs/bundle/release/app-release.aab /tmp/out/pack-stack-unsigned.aab
+          cp android/app/build/outputs/apk/debug/app-debug.apk /tmp/out/pack-stack-test.apk
+          echo "${{ github.run_number }}" > /tmp/out/version.txt
+          git config user.name "github-actions"; git config user.email "actions@github.com"
+          git checkout --orphan android-builds; git rm -rfq .; cp /tmp/out/* .
+          git add pack-stack-unsigned.aab pack-stack-test.apk version.txt
+          git commit -qm "Android build ${{ github.run_number }}"; git push -f origin android-builds

@@ -1,0 +1,18 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.murfeds.packstack'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.murfeds.packstack'
+        minSdk 26
+        targetSdk 36
+        versionCode (System.getenv('VERSION_CODE') ? System.getenv('VERSION_CODE').toInteger() : 1)
+        versionName '1.0.' + (System.getenv('VERSION_CODE') ?: '1')
+    }
+    buildTypes {
+        release { minifyEnabled false }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    androidResources { noCompress 'html' }
+}
+dependencies { implementation 'androidx.webkit:webkit:1.12.1' }

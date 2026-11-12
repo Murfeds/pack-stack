@@ -1,0 +1,222 @@
+{
+ "_readme": "Live config for Pack Stack. Edit and re-upload this file to change events, offers, shop contents, daily/weekly levels, ad pacing, seasons and the season pass WITHOUT rebuilding the game. Raise \"version\" every time you change it. Anything malformed is ignored and the built-in value is used instead.",
+ "version": 2,
+ "updated": "2026-11-12",
+ "daily": {
+  "pool": [
+   16,
+   90
+  ],
+  "salt": 0
+ },
+ "event": {
+  "levels": [
+   60,
+   70,
+   90,
+   110,
+   120,
+   140
+  ],
+  "robots": [
+   "comet",
+   "gizmo",
+   "aurora",
+   "tempo"
+  ]
+ },
+ "shop": {
+  "packs": [
+   {
+    "id": "packs_1",
+    "packs": 1,
+    "usd": 0.49
+   },
+   {
+    "id": "packs_5",
+    "packs": 5,
+    "usd": 1.99
+   },
+   {
+    "id": "packs_10",
+    "packs": 10,
+    "usd": 3.49
+   }
+  ],
+  "coins": {
+   "pack": 300,
+   "hints": 60
+  }
+ },
+ "offers": [
+  {
+   "id": "starter",
+   "on": true,
+   "title": "Starter bundle",
+   "text": "15 packs, 5 start boosts and a Rare robot",
+   "price": "$3.99"
+  },
+  {
+   "id": "noads",
+   "on": true,
+   "title": "Remove ads",
+   "text": "No ad breaks, and offers pay out at once",
+   "price": "$2.99"
+  },
+  {
+   "id": "pass",
+   "on": true,
+   "title": "Robot Pass",
+   "text": "A reward every day for 7 days",
+   "price": "$4.99"
+  }
+ ],
+ "ads": {
+  "seconds": 3,
+  "interEvery": 3,
+  "interMinLevel": 10,
+  "interstitials": true
+ },
+ "seasons": [
+  {
+   "id": "harvest",
+   "name": "Copper Harvest",
+   "from": "2026-11-01",
+   "to": "2026-11-30",
+   "tint": [
+    255,
+    150,
+    60,
+    0.1
+   ],
+   "fx": "spark",
+   "robot": "gizmo",
+   "blurb": "Warm copper light in the workshop."
+  },
+  {
+   "id": "frostfair",
+   "name": "Frost Fair",
+   "from": "2026-12-10",
+   "to": "2027-01-06",
+   "tint": [
+    150,
+    210,
+    255,
+    0.14
+   ],
+   "fx": "snow",
+   "robot": "aurora",
+   "blurb": "Snow on the workshop roof and frosted gems."
+  },
+  {
+   "id": "sparkfest",
+   "name": "Spark Festival",
+   "from": "2027-03-15",
+   "to": "2027-04-05",
+   "tint": [
+    255,
+    120,
+    200,
+    0.1
+   ],
+   "fx": "firefly",
+   "robot": "comet",
+   "blurb": "Lanterns and pink sparks."
+  }
+ ],
+ "pass": {
+  "price": "$4.99",
+  "tiers": [
+   [
+    40,
+    {
+     "c": 40
+    },
+    {
+     "p": 1
+    }
+   ],
+   [
+    100,
+    {
+     "s": 20
+    },
+    {
+     "c": 150
+    }
+   ],
+   [
+    180,
+    {
+     "c": 60
+    },
+    {
+     "p": 1
+    }
+   ],
+   [
+    280,
+    {
+     "p": 1
+    },
+    {
+     "s": 60
+    }
+   ],
+   [
+    400,
+    {
+     "c": 80
+    },
+    {
+     "p": 2
+    }
+   ],
+   [
+    540,
+    {
+     "s": 30
+    },
+    {
+     "c": 300
+    }
+   ],
+   [
+    700,
+    {
+     "c": 100
+    },
+    {
+     "p": 2
+    }
+   ],
+   [
+    880,
+    {
+     "p": 1
+    },
+    {
+     "s": 120
+    }
+   ],
+   [
+    1080,
+    {
+     "c": 150
+    },
+    {
+     "p": 3
+    }
+   ],
+   [
+    1300,
+    {
+     "p": 2
+    },
+    {
+     "x": "Season robot"
+    }
+   ]
+  ]
+ }
+}

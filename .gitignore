@@ -1,0 +1,7 @@
+# Android build output (made on GitHub)
+android/app/build/
+android/build/
+android/.gradle/
+android/app/src/main/assets/index.html
+android/app/src/main/assets/live.json
+android/app/src/main/assets/fonts*
