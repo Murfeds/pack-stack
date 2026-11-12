@@ -1543,7 +1543,7 @@ const Core = (() => {
     botsCrew: [0, 0, 1],   // 1 = show only my crew
     bgDim: [35, 0, 80],    // how much the in-game backdrop is darkened, in percent
     tod: [2, 0, 3],        // menu scene: 0 dawn, 1 day, 2 dusk, 3 night
-    volM: [70, 0, 100], volS: [85, 0, 100],   // music and sound-effect volume, in percent
+    volM: [70, 0, 100], mstyle: [0, 0, 1], volS: [85, 0, 100],   // music and sound-effect volume, in percent
     big: [0, 0, 1], hc: [0, 0, 1],            // Large text, High contrast
     lowp: [0, 0, 2],                          // low-power mode: 0 automatic, 1 always, 2 never
     anOk: [0, 0, 2],                          // play-stats consent: 0 not asked yet, 1 yes, 2 no
@@ -2475,6 +2475,7 @@ const Music = (() => {
 
   const LOUD = .4;   // the whole band at full slider (was .8: players found it too loud next to the sound effects)
   let c = null, master = null, comp = null, rev = null, lfo = null, noise = null, G = null, timer = 0;
+  let style = 0, cs = 0;   // 0 Chill (the default), 1 Epic. cs is the style of the song now playing
   let vol = .7, cur = "", want = "", tense = false, lite = false, pos = 0, nextT = 0, voices = 0, started = 0, tally = null;
   const memo = {};
   const note = k => { if (tally) tally[k] = (tally[k] || 0) + 1; };
@@ -2562,16 +2563,58 @@ const Music = (() => {
     if (tense && sec !== "chorus" && !(s & 1)) hat(t, .05);
   }
 
+
+  // ================= CHILL: the default style =================
+  // The same songs (keys, chords, tunes) played by a quiet lo-fi trio: soft electric piano, a warm pad, a music-box tune,
+  // a round bass and brushed drums, slower and swung, with a little vinyl crackle. No crashes, rolls or rises: it stays in the background.
+  const chillBpm = tr => Math.round(tr.bpm * .78);
+  function keys(t, m, v, dur) { note("keys"); const g = env(t, .012, .04, Math.min(.9, dur * .45), v, G.ld); for (const [mul, a, d] of [[1, 1, 0], [2, .22, 4], [3, .05, -3]]) { const o = c.createOscillator(), og = c.createGain(); o.type = "sine"; o.frequency.value = hz(m) * mul; o.detune.value = d; og.gain.value = a; o.connect(og); og.connect(g); o.start(t); o.stop(t + dur + 2.2); voices++; } }
+  function pad(t, m, dur, v) { note("pad"); const g = env(t, .9, dur * .8, .5, v, G.sf); for (const d of lite ? [0] : [-6, 6]) { const o = c.createOscillator(); o.type = "triangle"; o.frequency.value = hz(m); o.detune.value = d; o.connect(g); o.start(t); o.stop(t + dur + 2.5); voices++; } }
+  function bell(t, m, v) { note("tune"); const g = env(t, .003, .01, .32, v, G.ld), o = c.createOscillator(); o.type = "sine"; o.frequency.value = hz(m); o.connect(g); o.start(t); o.stop(t + 2.4); const g2 = env(t, .001, .004, .03, v * .35, G.ld), o2 = c.createOscillator(); o2.type = "sine"; o2.frequency.value = hz(m) * 4.02; o2.connect(g2); o2.start(t); o2.stop(t + .3); voices += 2; }
+  function thump(t, v) { note("kick"); const o = c.createOscillator(), g = c.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(46, t + .14); g.gain.setValueAtTime(v, t); g.gain.setTargetAtTime(0, t + .06, .07); o.connect(g); g.connect(G.dr); o.start(t); o.stop(t + .5); voices++; }
+  const brush = (t, v) => { note("brush"); hiss(t, 1700, .6, .07, v, "bandpass"); };
+  const shaker = (t, v) => { note("hat"); hiss(t, 6200, .9, .018, v, "highpass"); };
+  function chill(p, t, tr, sd) {
+    const bar = BARS[p >> 4], s = p & 15, sc = SCALE[tr.sc], sec = bar.sec, bi = bar.i, base = tr.key, e = s >> 1;
+    const deg = d => sc[((d % 7) + 7) % 7] + 12 * Math.floor(d / 7), fold = (m, lo) => { while (m < lo) m += 12; while (m >= lo + 12) m -= 12; return m; };
+    const ch = [0, 2, 4, 6].map(k => fold(base + deg(bar.chord + k), base - 7)), root = fold(base + deg(bar.chord), base - 24), barLen = sd * 16;
+    const sw = (s & 3) === 2 ? sd * .34 : 0, at = t + sw;   // swing: the off-beat eighths land a little late
+    const full = sec === "chorus" ? 1.15 : sec === "build" ? 1.05 : 1;
+    if (s === 0) {
+      G.sf.frequency.setTargetAtTime({ intro: 520, verse: 640, build: 700 + bi * 40, chorus: 820, down: 600 }[sec] * tr.cut, t, .8);
+      ch.slice(0, 3).forEach(m => pad(t, m, barLen, .016 * full));   // the warm bed under everything
+      ch.forEach((m, k) => keys(t + k * .012, m, .034 * full, sd * 6));   // piano chord on the one, rolled a touch
+      if (sec !== "intro" || bi >= 2) bass(t, root, sd * 7, .11);
+      if (Math.random() < .5) { note("crackle"); hiss(t + Math.random() * barLen, 3000, .4, .002, .03, "highpass"); }
+    }
+    if (s === 6 && sec !== "intro") ch.slice(1).forEach(m => keys(at, m, .022 * full, sd * 3));   // a softer second hit, pushed by the swing
+    if (s === 10 && (sec === "verse" || sec === "chorus" || sec === "build")) bass(at, root + 7, sd * 3, .075);
+    // the tune: a music box, every note of the song's tune but quiet, and only from the second half of the verse on
+    if (!(s & 1) && (sec !== "verse" || bi >= 4) && sec !== "down") {
+      const n = TUNE[sec][bi][e];
+      if (n != null && n >= 0) bell(at, base + deg(n) + 12, (sec === "chorus" ? .05 : sec === "intro" ? .035 : .04));
+    }
+    if (sec === "down" && s === 0 && bi < 3) bell(t, base + deg(TUNE.down[bi][0]) + 12, .03);
+    // brushed drums: a lazy thump, brushes on 2 and 4, a swung shaker; out in the intro and the let-down
+    if (sec !== "intro" && sec !== "down") {
+      if (s === 0 || s === 10) thump(at, s ? .17 : .22);
+      if (s === 4 || s === 12) brush(t, .06 * full);
+      if (!(s & 1)) shaker(at, (s & 3) === 2 ? .02 : .012);
+      if (tense && (s & 1)) shaker(t, .01);
+    } else if (sec === "down" && bi === 0 && !(s & 1)) shaker(at, .012);
+  }
+
   function tick() {
     if (!c || c.state !== "running") return; const now = c.currentTime;
-    if (want !== cur) {   // a new song: the old one fades out under it
-      if (cur) memo[cur] = pos & ~15;   // remember the bar, so coming back to this song later carries on from there instead of starting over
-      fadeOut(G); G = null; cur = want; if (!cur) return;
-      G = buses(TRACKS[cur]); pos = memo[cur] || 0; started++; nextT = now + .12;
+    if (want !== cur || (cur && style !== cs)) {   // a new song (or a new style): the old one fades out under it
+      if (cur) memo[cur + cs] = pos & ~15;   // remember the bar, so coming back to this song later carries on from there instead of starting over
+      fadeOut(G); G = null; cur = want; cs = style; if (!cur) return;
+      G = buses(TRACKS[cur]); pos = memo[cur + cs] || 0; started++; nextT = now + .12;
     }
     if (!cur || !G) return; if (nextT < now - .25) nextT = now + .08;   // after a pause, pick up cleanly
     const tr = TRACKS[cur];
-    try { while (nextT < now + .42) { const sd = 60 / (tr.bpm * (tense ? 1.22 : 1)) / 4; step(pos, nextT, tr, sd); nextT += sd; pos++; if (pos >= BARS.length * 16) pos = LOOP * 16; } } catch (e) {}
+    const play = cs ? step : chill, bpm = cs ? tr.bpm * (tense ? 1.22 : 1) : chillBpm(tr) * (tense ? 1.06 : 1);
+    try { while (nextT < now + .42) { const sd = 60 / bpm / 4; play(pos, nextT, tr, sd); nextT += sd; pos++; if (pos >= BARS.length * 16) pos = LOOP * 16; } } catch (e) {}
     if (voices > 4000) voices = 0;
   }
   return {
@@ -2585,17 +2628,20 @@ const Music = (() => {
     },
     volume(v) { vol = Math.max(0, Math.min(1, v)); if (master) master.gain.setTargetAtTime(vol * LOUD, c.currentTime, .05); if (!vol) { want = ""; if (c && cur) tick(); } },
     lowPower(on) { lite = !!on; },
+    // 0 Chill (default), 1 Epic. Switching fades the old style out and the new one in.
+    style(v) { style = v ? 1 : 0; if (c && cur && style !== cs) tick(); },
+    STYLES: ["Chill", "Epic"],
     rewire(ctx) { c = null; cur = ""; G = null; started = 0; if (ctx) { try { wire(ctx); } catch (e) { c = null; } } },
-    where: () => { const b = BARS[Math.min(BARS.length - 1, pos >> 4)]; return { track: cur, want, section: cur ? b.sec : "", bar: cur ? (pos >> 4) + 1 : 0, bars: BARS.length, tense, vol, lite, voices, ctx: c ? c.state : "none" }; },
+    where: () => { const b = BARS[Math.min(BARS.length - 1, pos >> 4)]; return { track: cur, want, style: cur ? cs : style, section: cur ? b.sec : "", bar: cur ? (pos >> 4) + 1 : 0, bars: BARS.length, tense, vol, lite, voices, ctx: c ? c.state : "none" }; },
     // tests: run the song's clock by hand (no sound) and report how many times each instrument plays in each part of the song
-    plan(track) { const tr = TRACKS[track], out = {}; if (!tr) return out; const real = { c, G, lfo, noise }; const fake = () => new Proxy(function () {}, { get: (_, k) => k === "currentTime" ? 0 : k === "sampleRate" ? 44100 : fake(), apply: () => fake(), construct: () => fake(), set: () => true }); c = fake(); G = { sf: fake(), dr: fake(), ld: fake(), dry: fake(), wet: fake() }; lfo = fake(); noise = fake();
-      try { BARS.forEach((b, i) => { tally = out[b.sec] = out[b.sec] || {}; for (let s = 0; s < 16; s++) step(i * 16 + s, 0, tr, .15); }); } catch (e) { out.error = String(e); }
+    plan(track, st = 1) { const tr = TRACKS[track], out = {}, fn = st ? step : chill; if (!tr) return out; const real = { c, G, lfo, noise }; const fake = () => new Proxy(function () {}, { get: (_, k) => k === "currentTime" ? 0 : k === "sampleRate" ? 44100 : fake(), apply: () => fake(), construct: () => fake(), set: () => true }); c = fake(); G = { sf: fake(), dr: fake(), ld: fake(), dry: fake(), wet: fake() }; lfo = fake(); noise = fake();
+      try { BARS.forEach((b, i) => { tally = out[b.sec] = out[b.sec] || {}; for (let s = 0; s < 16; s++) fn(i * 16 + s, 0, tr, .15); }); } catch (e) { out.error = String(e); }
       tally = null; c = real.c; G = real.G; lfo = real.lfo; noise = real.noise; return out; },
     // tests: play one whole song into memory (silently, faster than real time) and measure how loud each bar came out
-    async bounce(track, rate) {
-      const tr = TRACKS[track], sd = 60 / tr.bpm / 4, sr = rate || 22050, O = window.OfflineAudioContext || window.webkitOfflineAudioContext, oc = new O(1, Math.ceil((BARS.length * 16 * sd + 1.5) * sr), sr), real = { c, master, comp, rev, lfo, noise, G };
+    async bounce(track, rate, st = 1) {
+      const tr = TRACKS[track], fn = st ? step : chill, sd = 60 / (st ? tr.bpm : chillBpm(tr)) / 4, sr = rate || 22050, O = window.OfflineAudioContext || window.webkitOfflineAudioContext, oc = new O(1, Math.ceil((BARS.length * 16 * sd + 1.5) * sr), sr), real = { c, master, comp, rev, lfo, noise, G };
       wire(oc); G = buses(tr); for (const [n, v] of [[G.dry, 1], [G.wet, .5]]) { n.gain.cancelScheduledValues(0); n.gain.setValueAtTime(v, 0); }
-      for (let p = 0; p < BARS.length * 16; p++) step(p, .05 + p * sd, tr, sd);
+      for (let p = 0; p < BARS.length * 16; p++) fn(p, .05 + p * sd, tr, sd);
       ({ c, master, comp, rev, lfo, noise, G } = real);
       const d = (await oc.startRendering()).getChannelData(0), bars = BARS.map((b, i) => { const a = Math.floor((.05 + i * 16 * sd) * sr), z = Math.floor((.05 + (i + 1) * 16 * sd) * sr); let sq = 0, pk = 0; for (let k = a; k < z; k++) { const v = d[k]; sq += v * v; if (v > pk) pk = v; else if (-v > pk) pk = -v; } return { sec: b.sec, rms: Math.sqrt(sq / (z - a)), peak: pk }; });
       const out = { peak: Math.max(...bars.map(b => b.peak)), sec: {} }; for (const b of bars) (out.sec[b.sec] = out.sec[b.sec] || []).push(+(20 * Math.log10(b.rms + 1e-9)).toFixed(1)); return out;
@@ -3752,7 +3798,7 @@ function viewMenu() {
     (play ? `<section class="mn"><div class="row pause"><button class="btn pri" data-act="close" type="button">Resume</button><button class="btn" data-act="${lv ? "restart-yes" : "restart"}" type="button">Restart</button><button class="btn" data-act="home" type="button">${lv ? "Quit to map" : "Home"}</button></div></section>` : "") +
     `<section class="mn"><h3>Controls</h3><p class="note">Drag style: where a block sits while you drag it.</p>${seg("drag", ["Under finger", "Slight lift", "Big lift"], "Drag style")}</section>` +
     lookSection() +
-    `<section class="mn" id="mnAudio"><h3>Sound and haptics</h3><div class="sws">${sw("sound", "Sound")}</div>${slide("volS", "Sound effects volume")}<div class="sws">${sw("music", "Music")}</div>${slide("volM", "Music volume")}<p class="note" id="nowPlaying" aria-live="off"></p><div class="sws">${sw("vib", "Haptics (vibration)")}</div></section>` +
+    `<section class="mn" id="mnAudio"><h3>Sound and haptics</h3><div class="sws">${sw("sound", "Sound")}</div>${slide("volS", "Sound effects volume")}<div class="sws">${sw("music", "Music")}</div>${slide("volM", "Music volume")}<p class="note">Music style: Chill is calm, lo-fi background music. Epic is the full band with strings, drums and a big chorus.</p>${seg("mstyle", ["Chill", "Epic"], "Music style")}<p class="note" id="nowPlaying" aria-live="off"></p><div class="sws">${sw("vib", "Haptics (vibration)")}</div></section>` +
     `<section class="mn"><h3>Comfort</h3><div class="sws">${sw("calm", "Reduced motion")}${sw("lefty", "Left-handed layout")}${sw("chat", "Robot chatter")}${sw("ads", "Offers and ad placeholders")}</div></section>` +
     settingsExtra() +
     `<section class="mn"><h3>How to play</h3><ol class="how">${HOWTO.map(t => `<li>${t}</li>`).join("")}</ol></section>` +
@@ -3886,7 +3932,7 @@ const TABS = [["levels", "Levels", "M6 21V4h11l-2.5 3.5L17 11H6"], ["album", "Al
 function applySettings() {
   const m = S.meta, root = document.documentElement;
   reduced = sysReduced || !!m.calm; root.classList.toggle("calm", !!m.calm); root.classList.toggle("lefty", !!m.lefty);
-  Sfx.set(m.sound); Sfx.vol(m.volS / 100); Music.volume(m.music ? m.volM / 100 : 0); applyAccess(); Perf.apply(); feel();
+  Sfx.set(m.sound); Sfx.vol(m.volS / 100); Music.style(m.mstyle); Music.volume(m.music ? m.volM / 100 : 0); applyAccess(); Perf.apply(); feel();
 }
 // time played is banked whenever play stops, the page is hidden, or half a minute passes
 function clockIn() { if (screen === "play" && !document.hidden) playT = Date.now(); }
@@ -4895,10 +4941,10 @@ sheetEl.addEventListener("input", e => {
 });
 
 // Settings shows which song is playing and which part of it, so the build-up and the chorus are easy to find by ear
-const PARTNAME = { intro: "intro", verse: "verse", build: "build-up", chorus: "chorus (drums + full strings)", down: "let-down" };
+const PARTNAME = { intro: "intro", verse: "verse", build: "build-up", chorus: "chorus", down: "let-down" };
 function nowPlaying() {
   const el = $("nowPlaying"); if (!el) return; const w = Music.where(), on = S.meta.music && S.meta.sound && S.meta.volM > 0;
-  el.textContent = !on ? "Music is off." : w.track && w.ctx === "running" ? `Now playing: ${Music.TRACKS[w.track].n}, ${PARTNAME[w.section]}, bar ${w.bar} of ${w.bars}.` : "Music starts with your first tap.";
+  el.textContent = !on ? "Music is off." : w.track && w.ctx === "running" ? `Now playing: ${Music.TRACKS[w.track].n} (${Music.STYLES[w.style]}), ${PARTNAME[w.section]}, bar ${w.bar} of ${w.bars}.` : "Music starts with your first tap.";
 }
 setInterval(() => { if (view === "menu") nowPlaying(); }, 700);
 document.addEventListener("pointerdown", () => Sfx.wake(), { passive: true, capture: true });
