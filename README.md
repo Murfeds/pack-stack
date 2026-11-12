@@ -11,4 +11,5 @@ On Android (Chrome): open the link, tap the menu, then **Install app** (or **Add
 - `index.html` – the whole game in one file. `sw.js` keeps it working offline. `manifest.webmanifest` and the icons make it installable.
 - `live.json` – events, offers, the shop and seasons. Change it and raise `version`; players get it next time they're online, no new build needed.
 - `android/` – the Android app (the game inside a full-screen WebView). Every push to `main` that changes the game builds it on GitHub (see the Actions tab). The test APK and the Play Store bundle land on the `android-builds` branch.
+- `music/` – seven lo-fi tracks by HoliznaCC0, public domain (CC0): free to use, no credit required (credited in the game's About page anyway). Source: https://opengameart.org/content/happy-lo-fi-lofi-collection
 - `privacy.html` – privacy policy page (needed for the Play Store).

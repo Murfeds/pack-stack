@@ -1305,7 +1305,7 @@ const GAME = {
   version: "1.2.0",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "support@example.com",  // placeholder: put your real support address here before publishing
-  credits: [["Game design and direction", "Your name here"], ["Code, art and music", "Built with Claude"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
+  credits: [["Game design and direction", "Your name here"], ["Code and art", "Built with Claude"], ["Music", "HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
 };
 /*CORE-START*/
 const Core = (() => {
@@ -1543,7 +1543,7 @@ const Core = (() => {
     botsCrew: [0, 0, 1],   // 1 = show only my crew
     bgDim: [35, 0, 80],    // how much the in-game backdrop is darkened, in percent
     tod: [2, 0, 3],        // menu scene: 0 dawn, 1 day, 2 dusk, 3 night
-    volM: [70, 0, 100], mstyle: [0, 0, 1], volS: [85, 0, 100],   // music and sound-effect volume, in percent
+    volM: [70, 0, 100], mus: [0, 0, 2], volS: [85, 0, 100],   // music and sound-effect volume, in percent
     big: [0, 0, 1], hc: [0, 0, 1],            // Large text, High contrast
     lowp: [0, 0, 2],                          // low-power mode: 0 automatic, 1 always, 2 never
     anOk: [0, 0, 2],                          // play-stats consent: 0 not asked yet, 1 yes, 2 no
@@ -1571,6 +1571,7 @@ const Core = (() => {
     const dy = m.day && typeof m.day === "object" ? m.day : {}; DAYG.forEach(g => g.forEach(k => { o.day[k] = int(dy[k], 0, 1e7); }));
     FLAGS.forEach(k => { o[k] = m[k] !== false; }); OFFS.forEach(k => { o[k] = m[k] === true; });
     for (const k in NUMS) o[k] = m[k] === undefined || m[k] === null ? NUMS[k][0] : int(m[k], NUMS[k][1], NUMS[k][2]);
+    if (m.mus === undefined && m.mstyle === 1) o.mus = 2;   // picked Epic before there were three music styles
     if (m.vib === undefined) o.vib = o.sound;   // format 1 had one switch for sound and buzz
     // format 3 (the polish update). Older saves have none of these, so a player who already has progress skips the first-time flow.
     o.name = cleanName(m.name); o.av = CARD[m.av] && o.cards[m.av] > 0 ? m.av : "";
@@ -2475,7 +2476,8 @@ const Music = (() => {
 
   const LOUD = .4;   // the whole band at full slider (was .8: players found it too loud next to the sound effects)
   let c = null, master = null, comp = null, rev = null, lfo = null, noise = null, G = null, timer = 0;
-  let style = 0, cs = 0;   // 0 Chill (the default), 1 Epic. cs is the style of the song now playing
+  let style = 0, cs = 0;   // the made-here styles: 0 Chill, 1 Epic. cs is the style of the song now playing
+  let pick = 0, ctxRef = null, place = "", tenseNow = false;   // pick: 0 the recorded lo-fi tracks (default), 1 Chill, 2 Epic
   let vol = .7, cur = "", want = "", tense = false, lite = false, pos = 0, nextT = 0, voices = 0, started = 0, tally = null;
   const memo = {};
   const note = k => { if (tally) tally[k] = (tally[k] || 0) + 1; };
@@ -2621,18 +2623,24 @@ const Music = (() => {
     TRACKS, PARTS,
     // track "" (or volume 0) means silence. Called often: it only notes what is wanted, the clock does the rest.
     play(ctx, track, isTense) {
+      if (ctx) ctxRef = ctx; place = track || ""; tenseNow = !!isTense;
+      const rec = pick === 0 && typeof Radio !== "undefined" && Radio.ok();
+      if (rec) { if (ctx || ctxRef) Radio.play(ctx || ctxRef, vol > 0 && track && TRACKS[track] ? track : ""); track = ""; }
+      else if (typeof Radio !== "undefined") Radio.stop();
       want = vol > 0 && track && TRACKS[track] ? track : ""; tense = !!isTense;
       if (ctx && !c) { try { wire(ctx); } catch (e) { c = null; return; } }
       if (want && !timer) timer = setInterval(tick, 90);
       if (!want && c && cur) tick();
     },
-    volume(v) { vol = Math.max(0, Math.min(1, v)); if (master) master.gain.setTargetAtTime(vol * LOUD, c.currentTime, .05); if (!vol) { want = ""; if (c && cur) tick(); } },
+    volume(v) { vol = Math.max(0, Math.min(1, v)); if (typeof Radio !== "undefined") { Radio.volume(vol); if (!vol) Radio.stop(); } if (master) master.gain.setTargetAtTime(vol * LOUD, c.currentTime, .05); if (!vol) { want = ""; if (c && cur) tick(); } },
     lowPower(on) { lite = !!on; },
     // 0 Chill (default), 1 Epic. Switching fades the old style out and the new one in.
-    style(v) { style = v ? 1 : 0; if (c && cur && style !== cs) tick(); },
-    STYLES: ["Chill", "Epic"],
+    style(v) { const was = pick; pick = v === 2 ? 2 : v === 1 ? 1 : 0; style = pick === 2 ? 1 : 0; if (was !== pick && ctxRef) this.play(null, place, tenseNow); else if (c && cur && style !== cs) tick(); },
+    STYLES: ["Lo-fi", "Chill", "Epic"],
+    pick: () => pick,
+    _place: () => place,
     rewire(ctx) { c = null; cur = ""; G = null; started = 0; if (ctx) { try { wire(ctx); } catch (e) { c = null; } } },
-    where: () => { const b = BARS[Math.min(BARS.length - 1, pos >> 4)]; return { track: cur, want, style: cur ? cs : style, section: cur ? b.sec : "", bar: cur ? (pos >> 4) + 1 : 0, bars: BARS.length, tense, vol, lite, voices, ctx: c ? c.state : "none" }; },
+    where: () => { const b = BARS[Math.min(BARS.length - 1, pos >> 4)]; return { track: cur, want, pick, rec: typeof Radio !== "undefined" ? Radio.now() : null, style: cur ? cs : style, section: cur ? b.sec : "", bar: cur ? (pos >> 4) + 1 : 0, bars: BARS.length, tense, vol, lite, voices, ctx: c ? c.state : "none" }; },
     // tests: run the song's clock by hand (no sound) and report how many times each instrument plays in each part of the song
     plan(track, st = 1) { const tr = TRACKS[track], out = {}, fn = st ? step : chill; if (!tr) return out; const real = { c, G, lfo, noise }; const fake = () => new Proxy(function () {}, { get: (_, k) => k === "currentTime" ? 0 : k === "sampleRate" ? 44100 : fake(), apply: () => fake(), construct: () => fake(), set: () => true }); c = fake(); G = { sf: fake(), dr: fake(), ld: fake(), dry: fake(), wet: fake() }; lfo = fake(); noise = fake();
       try { BARS.forEach((b, i) => { tally = out[b.sec] = out[b.sec] || {}; for (let s = 0; s < 16; s++) fn(i * 16 + s, 0, tr, .15); }); } catch (e) { out.error = String(e); }
@@ -2648,6 +2656,99 @@ const Music = (() => {
     }
   };
 })();
+
+/* ================= radio.js: the recorded lo-fi tracks (the default music) =================
+   Seven real tracks by HoliznaCC0, released into the public domain (CC0): free to use in a game you sell, no credit required
+   (it is credited on the About page anyway). Each place in the game starts on its own track, and when a track ends the next
+   one fades in, so the music keeps flowing. The files sit next to the game in music/ and are only downloaded when first played
+   (the offline helper then keeps them). If a file cannot be loaded (no internet on a first visit), the game falls back to the
+   built-in Chill music by itself. */
+const Radio = (() => {
+  const LIST = [["blue-skies", "Blue Skies"], ["poor-but-happy", "Poor, But Happy"], ["puppy-love", "Puppy Love"], ["new-shoes", "New Shoes"], ["clouds", "Clouds"], ["a-little-off", "Happy, but a Little Off"], ["letting-go", "Letting Go of the Past"]];
+  const ARTIST = "HoliznaCC0";
+  const START = { menu: 0, endless: 3, w0: 1, w1: 2, w2: 4, w3: 6, w4: 5, w5: 3, w6: 0, w7: 4, w8: 2, w9: 1 };
+  const LOUD = .5, FADE = 1.6;
+  // a tenth of a second of silence: played once on the first touch so phones allow the music players to start later on their own
+  const SILENT = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAACAgICA";
+  let c = null, out = null, vol = .7, want = "", idx = -1, live = 0, broken = false, unlocked = false, timer = 0, failedAt = 0;
+  const decks = [0, 1].map(() => { let el = null; try { el = new Audio(); el.preload = "auto"; el.loop = false; } catch (e) {} return { el, g: null, i: -1 }; });
+  const urls = new Map(), loading = new Map(), pos = {};
+  // a file that loads but will not play (damaged, or not really music): give up on the tracks and use the built-in music
+  decks.forEach(d => { if (d.el) d.el.addEventListener("error", () => { if (d.el.src && d.el.src.slice(0, 5) === "blob:" && want) { broken = true; failedAt = Date.now(); if (Radio.onFail) Radio.onFail(); } }); });
+
+  function wire(ctx) {
+    if (c === ctx) return true;
+    try {
+      c = ctx; out = c.createGain(); out.gain.value = vol * LOUD; out.connect(c.destination);
+      for (const d of decks) { if (!d.el) throw new Error("no audio element"); const src = c.createMediaElementSource(d.el); d.g = c.createGain(); d.g.gain.value = 0; src.connect(d.g); d.g.connect(out); }
+      return true;
+    } catch (e) { broken = true; return false; }
+  }
+  // the whole file is fetched once and played from memory: works the same online, offline and inside the Android app
+  function load(i) {
+    const id = LIST[i][0]; if (urls.has(id)) return Promise.resolve(urls.get(id)); if (loading.has(id)) return loading.get(id);
+    const p = fetch("music/" + id + ".mp3").then(r => { const t = r.headers.get("content-type") || ""; if (!r.ok || /html|json|text/.test(t)) throw new Error("no track (" + r.status + " " + t + ")"); return r.blob(); }).then(b => {
+      const u = URL.createObjectURL(b); urls.set(id, u); loading.delete(id);
+      // keep at most three tracks in memory
+      if (urls.size > 3) for (const [k, v] of urls) { if (k !== id && decks.every(d => d.i < 0 || LIST[d.i][0] !== k)) { URL.revokeObjectURL(v); urls.delete(k); break; } }
+      return u;
+    }).catch(e => { loading.delete(id); throw e; });
+    loading.set(id, p); return p;
+  }
+  function ramp(g, to, s) { if (!g || !c) return; const t = c.currentTime; try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(to, t + s); } catch (e) {} }
+  // fade over to track i (starting where it was left off, if it was heard before)
+  function go(i) {
+    if (!c) return; idx = i; const old = decks[live], d = decks[1 - live], my = ++go.n;
+    load(i).then(u => {
+      if (my !== go.n || !want) return;
+      if (old.i >= 0 && old.el) pos[old.i] = old.el.currentTime;
+      d.el.src = u; d.i = i; const at = pos[i] || 0;
+      const start = () => { try { d.el.currentTime = at > 3 && at < (d.el.duration || 1e9) - 8 ? at : 0; } catch (e) {} };
+      if (d.el.readyState >= 1) start(); else d.el.addEventListener("loadedmetadata", start, { once: true });
+      const pr = d.el.play(); if (pr && pr.catch) pr.catch(() => {});
+      ramp(d.g, 1, FADE); ramp(old.g, 0, FADE); live = 1 - live;
+      setTimeout(() => { if (decks[live] !== old && old.el) try { old.el.pause(); } catch (e) {} }, FADE * 1000 + 150);
+      load((i + 1) % LIST.length).catch(() => {});   // the next track gets ready in the background
+    }).catch(() => { if (my === go.n) { broken = true; failedAt = Date.now(); if (Radio.onFail) Radio.onFail(); } });
+  }
+  go.n = 0;
+  function tick() {
+    if (!c) return; const d = decks[live];
+    if (!want) return;
+    if (c.state !== "running") { for (const k of decks) if (k.el && !k.el.paused) try { k.el.pause(); k.held = true; } catch (e) {} return; }
+    for (const k of decks) if (k.held) { k.held = false; if (k === d) { const pr = k.el.play(); if (pr && pr.catch) pr.catch(() => {}); } }
+    // near the end of a track: the next one fades in over it
+    if (d.i >= 0 && d.el && d.el.duration && !d.el.paused && d.el.duration - d.el.currentTime < FADE + .9) { pos[d.i] = 0; go((d.i + 1) % LIST.length); }
+    else if (d.i >= 0 && d.el && d.el.ended) go((d.i + 1) % LIST.length);
+  }
+  return {
+    LIST, ARTIST, onFail: null,
+    ok: () => !broken,   // after a failure the built-in music plays until the internet comes back (then the tracks get another try)
+    // place = "menu", "endless", "w0".."w9", or "" for silence
+    play(ctx, place) {
+      if (!ctx) return; if (!c && !wire(ctx)) return;
+      const was = want; want = place && START[place] != null ? place : "";
+      if (!timer) timer = setInterval(tick, 300);
+      if (!want) { if (was) { ramp(decks[live].g, 0, 1.2); setTimeout(() => { if (!want) for (const k of decks) if (k.el) try { if (k.i >= 0) pos[k.i] = k.el.currentTime; k.el.pause(); } catch (e) {} }, 1300); } return; }
+      if (want === was && idx >= 0) return;
+      const i = START[want];
+      // a place that starts on the track already playing just carries on with it
+      if (idx >= 0 && i === idx && decks[live].i === idx) { if (!was) { const d = decks[live]; ramp(d.g, 1, 1); const pr = d.el.play(); if (pr && pr.catch) pr.catch(() => {}); } return; }
+      go(i);
+    },
+    stop() { if (want) this.play(c, ""); },
+    volume(v) { vol = v; if (out) ramp(out, v * LOUD, .05); },
+    // the first touch: let both players start sound later without another touch (phones need this)
+    unlock() { if (unlocked) return; unlocked = true; for (const d of decks) { if (!d.el || d.el.src) continue; try { d.el.src = SILENT; const pr = d.el.play(); if (pr && pr.then) pr.then(() => { if (d.el.src === SILENT) d.el.pause(); }).catch(() => {}); } catch (e) {} } },
+    now() { const d = decks[live]; return d.i >= 0 && want ? { id: LIST[d.i][0], name: LIST[d.i][1], at: d.el ? Math.round(d.el.currentTime) : 0, len: d.el && d.el.duration ? Math.round(d.el.duration) : 0, playing: !!(d.el && !d.el.paused) } : null; },
+    _els: () => decks.map(d => d.el),   // for the tests
+    _retry() { broken = false; idx = -1; },
+    state: () => ({ want, idx, broken, live, decks: decks.map(d => ({ i: d.i, paused: d.el ? d.el.paused : true, gain: d.g ? +d.g.gain.value.toFixed(2) : 0 })) })
+  };
+})();
+document.addEventListener("pointerdown", () => Radio.unlock(), { capture: true, once: true });
+Radio.onFail = () => { try { Music.play(null, Music.where().want || Music._place(), false); } catch (e) {} };
+window.addEventListener("online", () => { try { if (Radio.ok()) return; Radio._retry(); Music.play(null, Music._place(), false); } catch (e) {} });
 // ---- pictures for the style sheet ----
 // The gem, block and texture pictures are handed to the style sheet as variables. As long "data:" text (about 20,000 characters each, 600,000 in
 // all) they made every re-style of a square slow, because the browser reads the whole text again each time. So a picture goes in straight away in
@@ -3798,7 +3899,7 @@ function viewMenu() {
     (play ? `<section class="mn"><div class="row pause"><button class="btn pri" data-act="close" type="button">Resume</button><button class="btn" data-act="${lv ? "restart-yes" : "restart"}" type="button">Restart</button><button class="btn" data-act="home" type="button">${lv ? "Quit to map" : "Home"}</button></div></section>` : "") +
     `<section class="mn"><h3>Controls</h3><p class="note">Drag style: where a block sits while you drag it.</p>${seg("drag", ["Under finger", "Slight lift", "Big lift"], "Drag style")}</section>` +
     lookSection() +
-    `<section class="mn" id="mnAudio"><h3>Sound and haptics</h3><div class="sws">${sw("sound", "Sound")}</div>${slide("volS", "Sound effects volume")}<div class="sws">${sw("music", "Music")}</div>${slide("volM", "Music volume")}<p class="note">Music style: Chill is calm, lo-fi background music. Epic is the full band with strings, drums and a big chorus.</p>${seg("mstyle", ["Chill", "Epic"], "Music style")}<p class="note" id="nowPlaying" aria-live="off"></p><div class="sws">${sw("vib", "Haptics (vibration)")}</div></section>` +
+    `<section class="mn" id="mnAudio"><h3>Sound and haptics</h3><div class="sws">${sw("sound", "Sound")}</div>${slide("volS", "Sound effects volume")}<div class="sws">${sw("music", "Music")}</div>${slide("volM", "Music volume")}<p class="note">Music style: Lo-fi is real recorded lo-fi tracks by HoliznaCC0. Chill and Epic are made by the game itself (Epic is the full band with strings and drums).</p>${seg("mus", ["Lo-fi", "Chill", "Epic"], "Music style")}<p class="note" id="nowPlaying" aria-live="off"></p><div class="sws">${sw("vib", "Haptics (vibration)")}</div></section>` +
     `<section class="mn"><h3>Comfort</h3><div class="sws">${sw("calm", "Reduced motion")}${sw("lefty", "Left-handed layout")}${sw("chat", "Robot chatter")}${sw("ads", "Offers and ad placeholders")}</div></section>` +
     settingsExtra() +
     `<section class="mn"><h3>How to play</h3><ol class="how">${HOWTO.map(t => `<li>${t}</li>`).join("")}</ol></section>` +
@@ -3932,7 +4033,7 @@ const TABS = [["levels", "Levels", "M6 21V4h11l-2.5 3.5L17 11H6"], ["album", "Al
 function applySettings() {
   const m = S.meta, root = document.documentElement;
   reduced = sysReduced || !!m.calm; root.classList.toggle("calm", !!m.calm); root.classList.toggle("lefty", !!m.lefty);
-  Sfx.set(m.sound); Sfx.vol(m.volS / 100); Music.style(m.mstyle); Music.volume(m.music ? m.volM / 100 : 0); applyAccess(); Perf.apply(); feel();
+  Sfx.set(m.sound); Sfx.vol(m.volS / 100); Music.style(m.mus); Music.volume(m.music ? m.volM / 100 : 0); applyAccess(); Perf.apply(); feel();
 }
 // time played is banked whenever play stops, the page is hidden, or half a minute passes
 function clockIn() { if (screen === "play" && !document.hidden) playT = Date.now(); }
@@ -4944,7 +5045,8 @@ sheetEl.addEventListener("input", e => {
 const PARTNAME = { intro: "intro", verse: "verse", build: "build-up", chorus: "chorus", down: "let-down" };
 function nowPlaying() {
   const el = $("nowPlaying"); if (!el) return; const w = Music.where(), on = S.meta.music && S.meta.sound && S.meta.volM > 0;
-  el.textContent = !on ? "Music is off." : w.track && w.ctx === "running" ? `Now playing: ${Music.TRACKS[w.track].n} (${Music.STYLES[w.style]}), ${PARTNAME[w.section]}, bar ${w.bar} of ${w.bars}.` : "Music starts with your first tap.";
+  const mmss = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  el.textContent = !on ? "Music is off." : w.rec && w.ctx === "running" ? `Now playing: ${w.rec.name} by ${Radio.ARTIST} (Lo-fi), ${mmss(w.rec.at)} of ${mmss(w.rec.len)}.` : w.track && w.ctx === "running" ? `Now playing: ${Music.TRACKS[w.track].n} (${Music.STYLES[w.style + 1]}), ${PARTNAME[w.section]}, bar ${w.bar} of ${w.bars}.` : w.pick === 0 && w.ctx === "running" ? "Loading the next track..." : "Music starts with your first tap.";
 }
 setInterval(() => { if (view === "menu") nowPlaying(); }, 700);
 document.addEventListener("pointerdown", () => Sfx.wake(), { passive: true, capture: true });
@@ -5395,7 +5497,7 @@ function afterBoot() {
   document.addEventListener("focusin", e => { if (e.target.matches && e.target.matches("input,textarea")) setTimeout(() => { try { e.target.scrollIntoView({ block: "center" }); } catch (x) {} }, 250); });
   window.addEventListener("pagehide", () => { Analytics.sessionEnd(); });
 }
-window.__ps = { ready: false, S, Core, Camp, Levels, LV, Scene, Bots, GAME, Skin, Pics, Music, musicTrack, Splash, Safe, Analytics, Ach, Haptic, First, Live, Season, Perf, Offline, Store, AdService, AdLog, musicMode, feel, boardFx, goalSentence, Hub: { goHub, goPlay, tab: openSheet, start: startLevel, state: () => ({ screen, mode, view, pop: !popEl.hidden }) }, Cloud, Shop, Sfx, Fx, Gems, Fresh, save, bot, cardInner, place: doPlace, open: openSheet, close: closeSheet, redraw: () => renderAll(), check: () => afterAction() };
+window.__ps = { ready: false, S, Core, Camp, Levels, LV, Scene, Bots, GAME, Skin, Pics, Music, Radio, musicTrack, Splash, Safe, Analytics, Ach, Haptic, First, Live, Season, Perf, Offline, Store, AdService, AdLog, musicMode, feel, boardFx, goalSentence, Hub: { goHub, goPlay, tab: openSheet, start: startLevel, state: () => ({ screen, mode, view, pop: !popEl.hidden }) }, Cloud, Shop, Sfx, Fx, Gems, Fresh, save, bot, cardInner, place: doPlace, open: openSheet, close: closeSheet, redraw: () => renderAll(), check: () => afterAction() };
 try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ meta: S.meta, run: S.endless, base: S.base, lrun: S.lrun })); } catch (_) {}
 const hotApi = window.claude && window.claude.hot;
 const go = d => start(d || {}).catch(e => Splash.fail(e));

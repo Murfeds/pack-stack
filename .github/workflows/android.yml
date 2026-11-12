@@ -2,7 +2,7 @@ name: Build Android app
 on:
   push:
     branches: [main]
-    paths: ['index.html', 'live.json', 'android/**', '.github/workflows/android.yml']
+    paths: ['index.html', 'live.json', 'music/**', 'android/**', '.github/workflows/android.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -20,6 +20,7 @@ jobs:
       - name: Put the latest game inside the app
         run: |
           cp index.html live.json android/app/src/main/assets/
+          mkdir -p android/app/src/main/assets/music && cp music/*.mp3 android/app/src/main/assets/music/
           python3 android/tools/fonts.py
       - name: Build
         env: { VERSION_CODE: '${{ github.run_number }}' }
