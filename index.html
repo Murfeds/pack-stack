@@ -1128,7 +1128,7 @@ body[data-scr="play"] .scene::before{content:"";position:absolute;z-index:5;inse
 .statebot.oops{transform:rotate(-8deg)}.statebot.empty{opacity:.8;filter:saturate(.6)}
 .statebot.net svg,.statebot.wait svg{animation:bb-bob 1.6s ease-in-out infinite}
 .panel>.statebot{align-self:center;width:64px;height:64px}
-.spin{display:block;width:30px;height:30px;margin:6px;border-radius:50%;border:4px solid rgba(180,194,214,.25);border-top-color:var(--brass-4);animation:gearturn .9s linear infinite}
+.loadspin{display:block;width:30px;height:30px;margin:6px;border-radius:50%;border:4px solid rgba(180,194,214,.25);border-top-color:var(--brass-4);animation:gearturn .9s linear infinite}
 .toast.bad{background:linear-gradient(180deg,#E0766C,#A5332E);color:#fff}
 .savedline{font-weight:800;color:#8CFFB0}
 .savedline.bad{color:#FFB4AC}
@@ -3324,6 +3324,10 @@ function floatText(txt, ix, cls) {
 }
 function toast(msg) { document.querySelectorAll(".toast").forEach(t => t.remove()); const t = h("div", "toast"); t.setAttribute("role", "status"); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2500); }
 function again(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+// the board's own effects (turn, shake, rise) play one at a time and take themselves off when done, so an old one never replays or hides a new one
+const BOARDFX = ["spin", "shake", "shake1", "lift"];
+function boardFx(cls) { boardEl.classList.remove(...BOARDFX); void boardEl.offsetWidth; boardEl.classList.add(cls); }
+boardEl.addEventListener("animationend", e => { if (e.target === boardEl) boardEl.classList.remove(...BOARDFX); });
 
 function renderTray(dealt) {
   S.run.tray.forEach((p, i) => {
@@ -3438,7 +3442,7 @@ function doPlace(i, r0, c0) {
     const shout = ev.perfect ? "Clean sweep!" : ev.L >= 2 ? ["", "", "Double!", "Triple!", "Blazing!", "Blazing!"][Math.min(ev.L, 5)] : ev.streak >= 2 ? "Streak ×" + ev.mult + "!" : "";
     if (shout) floatText(shout, at, "shout");
     if (ev.L >= 2 || ev.streak >= 3) { chatter(0); Bots.mood("cheer"); }
-    boardEl.classList.remove("shake", "shake1"); again(boardEl, ev.L >= 2 ? "shake" : "shake1");
+    boardFx(ev.L >= 2 ? "shake" : "shake1");
     if (ev.L >= 2 || ev.streak >= 3 || ev.perfect) Fx.flash(Math.min(.5, .1 + ev.L * .1 + ev.streak * .02));
     if (S.meta.tut === 0) S.meta.tut = 1;
   }
@@ -3687,7 +3691,7 @@ function viewShop() {
   }).join("");
   sheetIn.innerHTML = head("Pack shop") + `<div class="sheet-body" id="sheetBody">` +
     (!online() ? stateCard("net", "No internet", "The pack shop needs a connection. Everything else in the game works offline.", ["net-retry", "Try again"]) : "") +
-    (ban ? `<p class="shop-ban${st === "wait" ? " wait" : ""}" id="shopBan" role="status">${st === "wait" ? `<span class="spin" aria-hidden="true"></span>` : ""}${ban}</p>` : "") +
+    (ban ? `<p class="shop-ban${st === "wait" ? " wait" : ""}" id="shopBan" role="status">${st === "wait" ? `<span class="loadspin" aria-hidden="true"></span>` : ""}${ban}</p>` : "") +
     `<p class="note">Every pack holds 3 random robot cards. They are the same packs you earn by playing, and every robot can be found without paying.</p>` +
     `<section class="mn"><h3>What is inside a pack</h3>${oddsTable()}<p class="note">Robots of the same rarity are equally likely: there are ${count[0]} Common, ${count[1]} Rare, ${count[2]} Epic and ${count[3]} Legend. A pack has at least one Legend ${atLeast(3)}% of the time, and at least one Epic or better ${atLeast(2)}% of the time.</p></section>` +
     (rows ? `<section><h3>Packs</h3><div class="shop-list">${rows}</div><p class="shop-note" id="shopNote" role="status">${esc(Shop.note)}</p></section><p class="note">Payments are handled by Google Play.</p>` : "") +
@@ -4161,9 +4165,9 @@ function boostFx(out) {
 }
 function twistFx(fx) {
   for (const f of fx) {
-    if (f[0] === "rot") { again(boardEl, "spin"); Sfx.power(); }
-    else if (f[0] === "quake") { again(boardEl, "shake"); Sfx.bad(); }
-    else if (f[0] === "rise") { again(boardEl, "lift"); Sfx.deal(); }
+    if (f[0] === "rot") { boardFx("spin"); Sfx.power(); }
+    else if (f[0] === "quake") { boardFx("shake"); Sfx.bad(); }
+    else if (f[0] === "rise") { boardFx("lift"); Sfx.deal(); }
     else if (f[0] === "drop") { const c = cells[f[1]]; setTimeout(() => again(c, "dropin"), 0); Sfx.pack(); }
     else if (f[0] === "junk") f[1].forEach(i => setTimeout(() => again(cells[i], "dropin"), 0));
     else if (f[0] === "ice") setTimeout(() => again(cells[f[1]], "pop"), 0);
@@ -4180,7 +4184,7 @@ function lvPlace(i, r0, c0) {
     floatText("+" + fmt(ev.gain), at);
     const shout = ev.perfect ? "Clean sweep!" : ev.L >= 2 ? ["", "", "Double!", "Triple!", "Blazing!", "Blazing!"][Math.min(ev.L, 5)] : ev.streak >= 2 && !out.boosts.length ? "Streak ×" + ev.mult + "!" : "";
     if (shout) floatText(shout, at, "shout");
-    boardEl.classList.remove("shake", "shake1"); again(boardEl, ev.L >= 2 ? "shake" : "shake1");
+    boardFx(ev.L >= 2 ? "shake" : "shake1");
     if (ev.L >= 2 || ev.streak >= 3 || ev.perfect) Fx.flash(Math.min(.5, .1 + ev.L * .1 + ev.streak * .02));
   }
   boostFx(out);
@@ -4891,7 +4895,7 @@ const FACES = { hi: "bolt", oops: "dent", empty: "pip", wait: "widget", net: "la
 const botFace = kind => `<span class="statebot ${kind}" aria-hidden="true">${bot(Core.CARD[FACES[kind]] || Core.CARDS[0])}</span>`;
 // a friendly card: what happened, and one clear next step
 const stateCard = (kind, title, text, btn) => `<div class="state ${kind}" role="${kind === "oops" || kind === "net" ? "alert" : "status"}">${botFace(kind)}<div><b>${title}</b><p>${text}</p>${btn ? `<button class="btn sm${btn[2] ? " pri" : ""}" data-act="${btn[0]}"${btn[3] ? ` data-id="${btn[3]}"` : ""} type="button">${btn[1]}</button>` : ""}</div></div>`;
-const loadingRow = txt => `<div class="state wait" role="status"><span class="spin" aria-hidden="true"></span><div><b>${txt}</b></div></div>`;
+const loadingRow = txt => `<div class="state wait" role="status"><span class="loadspin" aria-hidden="true"></span><div><b>${txt}</b></div></div>`;
 function toastBot(msg) { toast(msg); const t = document.querySelector(".toast"); if (t) t.classList.add("bad"); }
 const online = () => navigator.onLine !== false;
 
@@ -5267,7 +5271,7 @@ function afterBoot() {
   document.addEventListener("focusin", e => { if (e.target.matches && e.target.matches("input,textarea")) setTimeout(() => { try { e.target.scrollIntoView({ block: "center" }); } catch (x) {} }, 250); });
   window.addEventListener("pagehide", () => { Analytics.sessionEnd(); });
 }
-window.__ps = { ready: false, S, Core, Camp, Levels, LV, Scene, Bots, GAME, Skin, Pics, Music, musicTrack, Splash, Safe, Analytics, Ach, Haptic, First, Live, Season, Perf, Offline, Store, AdService, AdLog, musicMode, feel, Hub: { goHub, goPlay, tab: openSheet, start: startLevel, state: () => ({ screen, mode, view, pop: !popEl.hidden }) }, Cloud, Shop, Sfx, Fx, Gems, Fresh, save, bot, cardInner, place: doPlace, open: openSheet, close: closeSheet, redraw: () => renderAll(), check: () => afterAction() };
+window.__ps = { ready: false, S, Core, Camp, Levels, LV, Scene, Bots, GAME, Skin, Pics, Music, musicTrack, Splash, Safe, Analytics, Ach, Haptic, First, Live, Season, Perf, Offline, Store, AdService, AdLog, musicMode, feel, boardFx, Hub: { goHub, goPlay, tab: openSheet, start: startLevel, state: () => ({ screen, mode, view, pop: !popEl.hidden }) }, Cloud, Shop, Sfx, Fx, Gems, Fresh, save, bot, cardInner, place: doPlace, open: openSheet, close: closeSheet, redraw: () => renderAll(), check: () => afterAction() };
 try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ meta: S.meta, run: S.endless, base: S.base, lrun: S.lrun })); } catch (_) {}
 const hotApi = window.claude && window.claude.hot;
 const go = d => start(d || {}).catch(e => Splash.fail(e));
