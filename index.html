@@ -1208,6 +1208,32 @@ textarea.code[readonly]{font:600 11.5px/1.4 ui-monospace,Menlo,Consolas,monospac
 /* in a level the big title on the left already says LEVEL 3 (or DAILY, EVENT), so the small copy beside the score only shows on narrow phones, where that title is hidden */
 @media (min-width:360px){.top .brand.lvl + .scorebox #bestLbl{display:none}}
 .updchip{position:fixed;z-index:46;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 84px);padding:10px 18px;border:0;background:var(--brass-3);color:var(--navy-0);font:800 14px/1 inherit;font-family:inherit;box-shadow:0 0 0 2px var(--navy-0),0 6px 18px rgba(0,0,0,.5);clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,10px 100%,0 50%);cursor:pointer;white-space:nowrap}
+/* the goal bar is a button: tap it for the full goal; a small "i" says so */
+.goals{appearance:none;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent}
+.goals::after{content:"i";flex:none;display:grid;place-items:center;width:17px;height:17px;margin-left:2px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--brass-3);color:var(--brass-4);font:italic 800 11px/1 Georgia,serif;opacity:.85}
+.goals:active{filter:brightness(1.25)}
+.goals:focus-visible{outline:2px solid var(--brass-4);outline-offset:4px}
+.goalinfo{text-align:left;max-width:400px}
+.goalinfo h2{text-align:center}
+.gq-lead{margin:10px 0 4px;font-weight:800;color:var(--brass-4);font-size:14px}
+.gq-boss{margin:6px 0;font-size:14px;line-height:1.4}
+.gqs{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.gqs li{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;background:rgba(5,9,16,.45);box-shadow:inset 0 0 0 1px rgba(214,178,98,.25)}
+.gqs li.done{box-shadow:inset 0 0 0 1.5px var(--go)}
+.gqs li.done small{color:var(--go)}
+.gq-ico{flex:none;display:flex;align-items:center;gap:2px;min-width:30px}
+.gq-ico .gi{width:26px;height:26px}
+.gqs b{display:flex;justify-content:space-between;gap:8px;font-size:15px}
+.gqs small{font-weight:800;color:var(--brass-4);white-space:nowrap}
+.gqs p{margin:3px 0 0;font-size:13.5px;line-height:1.4;color:var(--ink-2,#c8d2e2)}
+.gq-lim{margin:10px 0 0;font-size:13.5px;line-height:1.4}
+/* a picked block glows in the tray, and the board shows it is ready for a tap */
+.slot.picked{box-shadow:inset 0 0 0 2px var(--brass-4),0 0 14px rgba(230,196,119,.55)}
+.slot.picked .pc{animation:pickbob 1.1s ease-in-out infinite}
+@keyframes pickbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.board.picking{box-shadow:0 0 0 2px rgba(230,196,119,.5),0 0 16px rgba(230,196,119,.3)}
+.pc.drag.onboard{opacity:.6}
+@media (prefers-reduced-motion:reduce){.slot.picked .pc{animation:none}}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -1233,7 +1259,7 @@ textarea.code[readonly]{font:600 11.5px/1.4 ui-monospace,Menlo,Consolas,monospac
       <button class="packbtn" id="btnPacks" type="button" aria-label="Packs"><span class="mini-pack"></span><b id="packCount">0</b></button>
     </div>
   </div>
-  <div class="lvbar" id="lvbar" hidden><div class="goals" id="goals"></div><div class="lim" id="lim"></div><div class="tbar" id="tbar" hidden><i></i></div><div class="tbar clk" id="cbar" hidden><i></i></div></div>
+  <div class="lvbar" id="lvbar" hidden><button class="goals" id="goals" type="button" aria-label="Level goals. Tap for details."></button><div class="lim" id="lim"></div><div class="tbar" id="tbar" hidden><i></i></div><div class="tbar clk" id="cbar" hidden><i></i></div></div>
   <div class="stage" id="stage"><div class="board" id="board" role="img" aria-label="Game board, 8 by 8"></div></div>
   <p class="hint" id="hint" aria-live="polite"></p>
   <div class="crew" id="crew"></div>
@@ -2401,7 +2427,7 @@ const S = { meta: null, run: null, base: null, endless: null, lrun: null };   //
 const KEY = "packstack.v1";
 const boardEl = $("board"), stageEl = $("stage"), trayEl = $("tray"), crewEl = $("crew"), sheetEl = $("sheet"), sheetIn = $("sheetIn"), meterEl = $("meter"), btnPacks = $("btnPacks");
 const cells = [], slots = [];
-let mc = 18, slotRoom = 100, geom = null, drag = null, armed = null, view = null, hintT = 0, hintBusy = false, ghosted = [], aimed = [], aimPid = null;
+let mc = 18, slotRoom = 100, geom = null, drag = null, armed = null, view = null, hintT = 0, hintBusy = false, ghosted = [], aimed = [], aimPid = null, picked = null;
 const PK = { mode: "idle", t: 0 };
 
 
@@ -2447,13 +2473,14 @@ const Music = (() => {
   const SLOW = { intro: [4, 4, 2, 3], verse: [4, 4, 2, 3, 4, 6, 7, 5], build: [3, 4, 5, 6], down: [7, 4, 5, 4] };   // the long note the strings sing over each bar
   const hz = m => 440 * Math.pow(2, (m - 69) / 12);
 
+  const LOUD = .4;   // the whole band at full slider (was .8: players found it too loud next to the sound effects)
   let c = null, master = null, comp = null, rev = null, lfo = null, noise = null, G = null, timer = 0;
   let vol = .7, cur = "", want = "", tense = false, lite = false, pos = 0, nextT = 0, voices = 0, started = 0, tally = null;
   const memo = {};
   const note = k => { if (tally) tally[k] = (tally[k] || 0) + 1; };
 
   function wire(ctx) {
-    c = ctx; master = c.createGain(); master.gain.value = vol * .8; comp = c.createDynamicsCompressor();
+    c = ctx; master = c.createGain(); master.gain.value = vol * LOUD; comp = c.createDynamicsCompressor();
     comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 3.5; comp.attack.value = .008; comp.release.value = .25; master.connect(comp); comp.connect(c.destination);
     // a small hall: a second and a half of fading hiss used as an echo print
     const n = Math.floor(c.sampleRate * 1.5), ir = c.createBuffer(2, n, c.sampleRate); let s = 99;
@@ -2556,7 +2583,7 @@ const Music = (() => {
       if (want && !timer) timer = setInterval(tick, 90);
       if (!want && c && cur) tick();
     },
-    volume(v) { vol = Math.max(0, Math.min(1, v)); if (master) master.gain.setTargetAtTime(vol * .8, c.currentTime, .05); if (!vol) { want = ""; if (c && cur) tick(); } },
+    volume(v) { vol = Math.max(0, Math.min(1, v)); if (master) master.gain.setTargetAtTime(vol * LOUD, c.currentTime, .05); if (!vol) { want = ""; if (c && cur) tick(); } },
     lowPower(on) { lite = !!on; },
     rewire(ctx) { c = null; cur = ""; G = null; started = 0; if (ctx) { try { wire(ctx); } catch (e) { c = null; } } },
     where: () => { const b = BARS[Math.min(BARS.length - 1, pos >> 4)]; return { track: cur, want, section: cur ? b.sec : "", bar: cur ? (pos >> 4) + 1 : 0, bars: BARS.length, tense, vol, lite, voices, ctx: c ? c.state : "none" }; },
@@ -3330,6 +3357,7 @@ function boardFx(cls) { boardEl.classList.remove(...BOARDFX); void boardEl.offse
 boardEl.addEventListener("animationend", e => { if (e.target === boardEl) boardEl.classList.remove(...BOARDFX); });
 
 function renderTray(dealt) {
+  if (picked != null && (!S.run.tray[picked] || S.run.over)) setPicked(null);
   S.run.tray.forEach((p, i) => {
     const s = slots[i]; s.className = "slot" + (p ? "" : " used") + (dealt ? " in" : "") + (lockedSlot(i) ? " locked" : ""); s.textContent = "";
     if (p) { s.appendChild(pieceEl(p, traySize(p), 2)); s.setAttribute("aria-label", "Block " + (i + 1)); } else s.removeAttribute("aria-label");
@@ -3363,6 +3391,7 @@ function renderHint() {
   const r = S.run, el = $("hint"); let t = "", end = false; clearTimeout(hintT); hintBusy = false;
   if (r.over) t = "";
   else if (armed) { const c = CARD[r.crew[armed.i].id], pw = POW[c.pow]; t = pw.t === "now" ? `Tap ${c.name} again to swap your blocks.` : pw.t === "tray" ? `${pw.n}: tap one of your blocks.` : `${pw.n}: tap the board where you want it.`; }
+  else if (picked != null && r.tray[picked]) t = "Tap the board to place it, or touch and slide it into place.";
   else if (r.stuck) { t = "No block fits. Use a robot power, or"; end = true; }
   else if (r.lv) t = lvHint(r) || " ";
   else if (S.meta.tut === 0) t = "Drag a block up. Fill a row or column to clear it.";
@@ -3394,25 +3423,39 @@ function showGhost(p, r, c) {
   res.cleared.forEach(ix => { const el = cells[ix]; el.classList.add("wc"); ghosted.push(el); });
   return res.cleared.length > 0;
 }
+// Tap a block to pick it (it glows), then tap the board to put it there, or touch the board and slide it into place.
+// Dragging straight from the tray still works exactly as before.
+function setPicked(i) { picked = i == null ? null : i; slots.forEach((s, k) => s.classList.toggle("picked", k === picked)); boardEl.classList.toggle("picking", picked != null); renderHint(); }
+function boardDown(e) {
+  const i = picked, p = S.run.tray[i]; if (!p || drag || S.run.over || view || !popEl.hidden || e.button > 0) return;
+  e.preventDefault(); measure(); clearHintMove();
+  const { w, h: ht } = Core.dims(p.k), gap = geom.pitch - geom.cell, node = pieceEl(p, geom.cell, gap);
+  node.classList.add("drag", "onboard"); document.body.appendChild(node);
+  // the block is centred on the finger and not lifted, so a plain tap puts it where you tapped
+  drag = { i, p, pid: e.pointerId, touch: e.pointerType !== "mouse", node, slot: slots[i], cap: boardEl, board: true, pw: w * geom.pitch - gap, ph: ht * geom.pitch - gap, gx: .5, gy: .5, lift: 0, r: null, c: null, ok: false, near: true, x0: e.clientX, y0: e.clientY };
+  try { boardEl.setPointerCapture(e.pointerId); } catch (_) {}
+  slots[i].classList.add("lift"); dragTo(e.clientX, e.clientY);
+}
 function trayDown(e) {
   const slot = e.target.closest(".slot"); if (!slot || drag || S.run.over || view || !popEl.hidden) return;
   const i = +slot.dataset.i, p = S.run.tray[i]; if (!p) return;
   if (armed && POW[armed.type].t === "tray") { e.preventDefault(); useTrayPower(i); return; }
   if (e.button > 0) return;
+  const was = picked; if (picked != null) setPicked(null);
   e.preventDefault(); disarm(); measure();
   const { w, h: ht } = Core.dims(p.k), gap = geom.pitch - geom.cell, node = pieceEl(p, geom.cell, gap), touch = e.pointerType !== "mouse";
   node.classList.add("drag"); document.body.appendChild(node);
   // Remember the exact spot of the block that was touched, as a share of its width and height (gx, gy). While dragging, that same
   // spot stays under the finger. lift is how far the block is drawn above the finger so a thumb does not hide it; a mouse never lifts.
   const mini = slot.firstElementChild ? slot.firstElementChild.getBoundingClientRect() : slot.getBoundingClientRect(), share = (v, a, size) => (size > 0 ? Math.max(0, Math.min(1, (v - a) / size)) : .5);
-  drag = { i, p, pid: e.pointerId, touch, node, slot, pw: w * geom.pitch - gap, ph: ht * geom.pitch - gap, gx: share(e.clientX, mini.left, mini.width), gy: share(e.clientY, mini.top, mini.height), lift: touch ? LIFT[S.meta.drag] * geom.pitch : 0, r: null, c: null, ok: false, near: false };
+  drag = { i, p, pid: e.pointerId, touch, node, slot, pw: w * geom.pitch - gap, ph: ht * geom.pitch - gap, gx: share(e.clientX, mini.left, mini.width), gy: share(e.clientY, mini.top, mini.height), lift: touch ? LIFT[S.meta.drag] * geom.pitch : 0, r: null, c: null, ok: false, near: false, x0: e.clientX, y0: e.clientY, was };
   try { slot.setPointerCapture(e.pointerId); } catch (_) {}
   slot.classList.add("lift"); Sfx.pick(); dragTo(e.clientX, e.clientY);
 }
 // One set of numbers decides everything: left/top is where the block is drawn, and the square under its top-left corner is where the
   // ghost shows and where the block lands. What you see is what you get.
 function dragTo(x, y) {
-  const d = drag, left = x - d.gx * d.pw, top = y - d.gy * d.ph - d.lift;
+  const d = drag, left = x - d.gx * d.pw, top = y - d.gy * d.ph - d.lift; d.lx = x; d.ly = y;
   d.node.style.transform = `translate3d(${left}px,${top}px,0)`;
   const c = Math.round((left - geom.ox) / geom.pitch), r = Math.round((top - geom.oy) / geom.pitch), ok = Core.fits(S.run.grid, d.p.k, r, c);
   d.near = r > -2 && c > -2 && r < N + 1 && c < N + 1;
@@ -3423,9 +3466,11 @@ function dragEnd(e) {
   if (!drag || (e && e.pointerId !== drag.pid)) return;
   if (e && e.type === "pointerup") dragTo(e.clientX, e.clientY);
   const d = drag; drag = null; clearGhost();
-  try { d.slot.releasePointerCapture(d.pid); } catch (_) {}
-  if (e && e.type === "pointerup" && d.ok) { d.node.remove(); d.slot.classList.remove("lift"); doPlace(d.i, d.r, d.c); return; }
-  if (e && e.type === "pointerup" && d.near) Sfx.bad();
+  try { (d.cap || d.slot).releasePointerCapture(d.pid); } catch (_) {}
+  const up = e && e.type === "pointerup", tapped = up && !d.board && Math.hypot((d.lx || d.x0) - d.x0, (d.ly || d.y0) - d.y0) < 12;
+  if (up && d.ok && !tapped) { d.node.remove(); d.slot.classList.remove("lift"); if (d.board) setPicked(null); doPlace(d.i, d.r, d.c); return; }
+  if (tapped) { Sfx.pick(); setPicked(d.was === d.i ? null : d.i); }   // a tap (no slide) picks the block; tapping it again puts it back
+  else if (up && d.near) Sfx.bad();
   const s = d.slot.getBoundingClientRect(), k = traySize(d.p) / geom.cell;
   d.node.style.transformOrigin = "0 0"; d.node.style.transition = "transform .16s ease-out";
   d.node.style.transform = `translate3d(${s.left + s.width / 2 - d.pw * k / 2}px,${s.top + s.height / 2 - d.ph * k / 2}px,0) scale(${k})`;
@@ -3496,7 +3541,7 @@ function crewTap(i) {
     else disarm();
     return;
   }
-  armed = { i, type: c.pow }; Sfx.pick(); clearAim();
+  if (picked != null) setPicked(null); armed = { i, type: c.pow }; Sfx.pick(); clearAim();
   boardEl.classList.toggle("armed", pw.t === "cell"); renderTray(); renderCrew(); renderHint();
 }
 function useTrayPower(slot) {
@@ -3777,6 +3822,7 @@ async function start(hot) {
   document.addEventListener("pointermove", dragMove, { passive: false });
   document.addEventListener("pointerup", dragEnd);
   document.addEventListener("pointercancel", dragEnd);
+  boardEl.addEventListener("pointerdown", e => { if (!aiming() && picked != null) boardDown(e); });
   boardEl.addEventListener("pointerdown", e => { if (!aiming()) return; e.preventDefault(); aimPid = e.pointerId; try { boardEl.setPointerCapture(e.pointerId); } catch (_) {} showAim(e.clientX, e.clientY); });
   boardEl.addEventListener("pointermove", e => { if (aiming() && (aimPid === e.pointerId || (aimPid == null && e.pointerType === "mouse"))) showAim(e.clientX, e.clientY); });
   boardEl.addEventListener("pointerup", e => { if (aimPid !== e.pointerId) return; aimPid = null; const t = cellAt(e.clientX, e.clientY); clearAim(); if (t && aiming()) firePower(t.r, t.c); });
@@ -3850,7 +3896,7 @@ function wipeLocal() { try { localStorage.removeItem(ADKEY); localStorage.remove
 function closePop() { popEl.hidden = true; popEl.textContent = ""; }
 
 function goHub(tab) {
-  if (drag) dragEnd(); disarm(); bankTime(true); pauseLevel(); clearHintMove();
+  if (drag) dragEnd(); disarm(); if (picked != null) setPicked(null); bankTime(true); pauseLevel(); clearHintMove();
   screen = "hub"; document.body.dataset.scr = "hub"; appEl.hidden = true; hubEl.hidden = false; $("over").hidden = true; closePop();
   S.run = S.endless; Ui.set({ scr: "hub" });
   view = null; openSheet(tab || "home"); feel();
@@ -3976,6 +4022,7 @@ function hubStart() {
   tabsEl.innerHTML = TABS.map(([id, name, d]) => `<button class="tab" data-tab="${id}" type="button" aria-label="${name}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span>${name}</span><i class="dot" hidden></i></button>`).join("");
   tabsEl.addEventListener("click", e => { const t = e.target.closest(".tab"); if (t && t.dataset.tab !== view) openSheet(t.dataset.tab); });
   popEl.addEventListener("click", popClick);
+  $("goals").addEventListener("click", showGoals);
   const brand = document.querySelector(".hubtop .brand"); if (brand) { brand.outerHTML = `<button class="me" id="meBtn" type="button"></button>`; $("meBtn").addEventListener("click", () => { if (view !== "profile") openSheet("profile"); }); }
   Tiles.init(); setInterval(tickLevel, 100); hub3Start();
   $("btnUndo").addEventListener("click", undoMove);
@@ -4098,6 +4145,35 @@ function goalIcon(q) {
   return `<svg class="gi" viewBox="0 0 24 24" aria-hidden="true"><path d="${GICON[q.t]}"/></svg>` + (q.t === "multi" ? `<em>x${q.L}</em>` : "");
 }
 const GOALNAME = { score: "Score", lines: "Lines cleared", tgt: "Marked gems", stone: "Stone", ice: "Ice", multi: "Combos", col: "Color lines", streak: "Streak", survive: "Blocks placed", empty: "Blocks on the board", get: "Collected", boost: "Boosts set off" };
+// tapping the goal bar explains every goal in full, with the numbers, plus the level's limit and twists
+const plural = (n, one, many) => n + " " + (n === 1 ? one : many || one + "s");
+function goalSentence(q) {
+  switch (q.t) {
+    case "score": return `Score ${fmt(q.n)} points. Every block and every clear scores. Clearing several lines with one block, and clearing on move after move, scores far more.`;
+    case "lines": return `Clear ${plural(q.n, "line")}. A line is a full row or a full column: fill every square in it and it vanishes.`;
+    case "tgt": return `Clear the ${plural(q.n, "gem")} with a gold ring. Fill the row or column a ringed gem sits in, and it goes with the line.`;
+    case "stone": return `Break ${plural(q.n, "stone block")}. Stone takes two clears: the first line through it cracks it, the second breaks it.`;
+    case "ice": return `Break ${plural(q.n, "ice block")}. Ice never helps fill a line, so clear a line right next to it to crack it open.`;
+    case "multi": return `Clear ${q.L} or more lines with a single block, ${q.n === 1 ? "once" : q.n + " times"}. Build up ${q.L} nearly full rows or columns that one block can finish together.`;
+    case "col": return `Clear ${plural(q.n, "line")} that each hold ${q.k || 3} or more gems like the one shown. Group that gem together, then fill the line.`;
+    case "streak": return `Reach a streak of ${q.n}: keep clearing lines. Three blocks in a row without a clear ends the streak.`;
+    case "survive": return `Place ${plural(q.n, "block")} without running out of room. Junk drops in as you play, so keep the board open.`;
+    case "empty": return `Leave nothing at all on the board. Every block you are given is part of the answer, so think before you place.`;
+    case "get": return `Bring ${plural(q.n, "key")} to the bottom row. Clear the squares under a key and it falls; when it reaches the bottom row you collect it.`;
+    case "boost": return `Set off ${plural(q.n, "boost tile")}. Clear a line through a glowing tile and it goes off.`;
+  }
+  return (TIPS["g:" + q.t] || ["", ""])[1];
+}
+function showGoals() {
+  const r = S.run, lv = r && r.lv, cfg = LV.cfg; if (!lv || !cfg || screen !== "play" || drag || view || !popEl.hidden || r.over) return;
+  if (picked != null) setPicked(null); disarm();
+  const name = lv.sp === "daily" ? "Daily challenge" : lv.sp === "event" ? "Weekly event" : "Level " + lv.id;
+  const goals = lv.goals.map(q => `<li class="${q.have >= q.n ? "done" : ""}"><span class="gq-ico">${goalIcon(q)}</span><div><b>${GOALNAME[q.t]}<small>${q.have >= q.n ? "Done" : goalText(q)}</small></b><p>${esc(goalSentence(q))}</p></div></li>`).join("");
+  const lim = cfg.moves ? `You have ${plural(Math.max(0, lv.left), "move")} left. Each block you place is one move.` : cfg.time ? "This level is on a timer: finish before the bar at the top runs out." : "No move limit on this level.";
+  const tw = (cfg.tips || []).filter(k => k.slice(0, 2) === "t:" && TIPS[k]).map(k => `<li class="tw"><div><b>${esc(TIPS[k][0])}</b><p>${esc(TIPS[k][1])}</p></div></li>`).join("");
+  showPop(`<div class="panel goalinfo"><h2>${esc(name)}</h2>${cfg.boss ? `<p class="gq-boss"><b>Boss: ${esc(cfg.boss)}.</b> ${esc(cfg.rule || "")}</p>` : ""}<p class="gq-lead">${lv.goals.length > 1 ? "Finish every goal to win:" : "To win:"}</p><ul class="gqs">${goals}</ul><p class="gq-lim">${lim} ${cfg.moves ? "The more moves you have left when you win, the more stars you get." : cfg.time ? "The more time you have left when you win, the more stars you get." : "A higher score earns more stars."}</p>${tw ? `<p class="gq-lead">On this level:</p><ul class="gqs">${tw}</ul>` : ""}<div class="row"><button class="btn pri" data-act="pop-close" type="button">Back to the level</button></div></div>`);
+  Sfx.ui();
+}
 function renderLevel() {
   const r = S.run, lv = r.lv, bar = $("lvbar"), on = !!lv && screen === "play";
   bar.hidden = !on; $("btnAlbum").hidden = on; $("btnUndo").hidden = !on || !lv.undo || lv.undone || r.over;
@@ -4452,6 +4528,8 @@ function showHintMove(strong) {
   slots[b.i].classList.add("hintp"); hintOn = { cells: list, slot: slots[b.i], b };
   return b;
 }
+// the game only points at a move by itself on the first three levels; after that only the Hint button does
+const autoHints = () => { const r = S.run; return !!(r && r.lv && !r.lv.sp && r.lv.id <= 3); };
 function useHintButton() {
   if (S.run.over || !popEl.hidden) return;
   if (!Core.useHint(S.meta, today())) return toast("No hints left today. The Store has 3 more for " + Core.PRICE.hints + " coins.");
@@ -4459,7 +4537,7 @@ function useHintButton() {
 }
 // teaching levels: a hand slides from the block to where it goes, until the player picks the block up
 function showHand() {
-  const r = S.run; if (!r || !r.lv || r.lv.sp || r.lv.id > 5 || r.over || r.moves > 2) return;
+  const r = S.run; if (!r || !r.lv || r.lv.sp || r.lv.id > 3 || r.over || r.moves > 2) return;
   const b = showHintMove(true); if (!b) return;
   const s = slots[b.i].getBoundingClientRect(), d = Core.dims(r.tray[b.i].k), a = cells[b.r * N + b.c].getBoundingClientRect(), z = cells[(b.r + d.h - 1) * N + b.c + d.w - 1].getBoundingClientRect();
   const x0 = s.left + s.width / 2, y0 = s.top + s.height / 2, x1 = (a.left + z.right) / 2, y1 = (a.top + z.bottom) / 2, el = h("div", "hand"); el.id = "hand"; document.body.appendChild(el);
@@ -4504,7 +4582,7 @@ function hub3Start() {
   $("startOffer").addEventListener("click", () => takeOffer("start_boost"));
   // the chatter bubble never takes a touch: it sits over the logo corner, lets every tap through, and any tap anywhere sends it away
   document.addEventListener("pointerdown", () => { lastTouch = Date.now(); clearHintMove(); $("chat").hidden = true; }, true);
-  setInterval(() => { if (screen === "play" && !view && popEl.hidden && !AdService.open && !hintOn && !drag && S.run && !S.run.over && Date.now() - lastTouch > 8000) showHintMove(false); if (S.run && S.run.lv && S.run.lv.ms <= 10500) Sfx.tune(musicMode(), musicTrack()); }, 1000);
+  setInterval(() => { if (autoHints() && screen === "play" && !view && popEl.hidden && !AdService.open && !hintOn && !drag && S.run && !S.run.over && Date.now() - lastTouch > 8000) showHintMove(false); if (S.run && S.run.lv && S.run.lv.ms <= 10500) Sfx.tune(musicMode(), musicTrack()); }, 1000);
 }
 
 /* ================= scene.js: the robot workshop world =================
@@ -5271,7 +5349,7 @@ function afterBoot() {
   document.addEventListener("focusin", e => { if (e.target.matches && e.target.matches("input,textarea")) setTimeout(() => { try { e.target.scrollIntoView({ block: "center" }); } catch (x) {} }, 250); });
   window.addEventListener("pagehide", () => { Analytics.sessionEnd(); });
 }
-window.__ps = { ready: false, S, Core, Camp, Levels, LV, Scene, Bots, GAME, Skin, Pics, Music, musicTrack, Splash, Safe, Analytics, Ach, Haptic, First, Live, Season, Perf, Offline, Store, AdService, AdLog, musicMode, feel, boardFx, Hub: { goHub, goPlay, tab: openSheet, start: startLevel, state: () => ({ screen, mode, view, pop: !popEl.hidden }) }, Cloud, Shop, Sfx, Fx, Gems, Fresh, save, bot, cardInner, place: doPlace, open: openSheet, close: closeSheet, redraw: () => renderAll(), check: () => afterAction() };
+window.__ps = { ready: false, S, Core, Camp, Levels, LV, Scene, Bots, GAME, Skin, Pics, Music, musicTrack, Splash, Safe, Analytics, Ach, Haptic, First, Live, Season, Perf, Offline, Store, AdService, AdLog, musicMode, feel, boardFx, goalSentence, Hub: { goHub, goPlay, tab: openSheet, start: startLevel, state: () => ({ screen, mode, view, pop: !popEl.hidden }) }, Cloud, Shop, Sfx, Fx, Gems, Fresh, save, bot, cardInner, place: doPlace, open: openSheet, close: closeSheet, redraw: () => renderAll(), check: () => afterAction() };
 try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ meta: S.meta, run: S.endless, base: S.base, lrun: S.lrun })); } catch (_) {}
 const hotApi = window.claude && window.claude.hot;
 const go = d => start(d || {}).catch(e => Splash.fail(e));
