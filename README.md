@@ -1,6 +1,6 @@
 # Pack Stack
 
-A gem block puzzle with collectible robot cards: 150 levels across 10 robot-workshop worlds, card packs that act as power-ups, achievements, seasons and daily challenges.
+A gem block puzzle with collectible robot cards: 600 levels across 40 worlds, card packs that act as power-ups, achievements, seasons and daily challenges.
 
 **Play / install:** https://murfeds.github.io/pack-stack/
 

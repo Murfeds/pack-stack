@@ -1326,6 +1326,11 @@ textarea.code[readonly]{font:600 11.5px/1.4 ui-monospace,Menlo,Consolas,monospac
 .pk-stage.reveal.all .rv.rays::before{width:180%;margin:-90% 0 0 -90%}
 /* short phones: a slightly smaller pack picture, so "Open all" and "Pack shop" sit on screen without scrolling */
 @media (max-height:640px){.pk-stage:not(.reveal){min-height:206px;padding-block:2px}.pk-stage:not(.reveal) .pack{width:min(40%,146px)}.pk-sub{min-height:0}}
+
+/* the plate at the top of the map: the worlds still ahead */
+.wmore{position:absolute;left:0;right:0;top:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0 16px;background:var(--tx-stone,none),linear-gradient(180deg,#0E1828,#1B2C45);box-shadow:inset 0 -3px 0 rgba(255,236,170,.5);text-align:center}
+.wmore b{padding:6px 22px 7px;background:var(--tx-metal,none),var(--brass);color:var(--ink-d);font:400 15px/1 var(--font-display);clip-path:polygon(0 0,100% 0,calc(100% - 9px) 50%,100% 100%,0 100%,9px 50%);filter:drop-shadow(0 2px 0 rgba(7,12,22,.85))}
+.wmore small{font:600 11.5px/1.25 var(--font-ui);color:#C6D2E4}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -1394,7 +1399,7 @@ const GAME = {
   name: "Pack Stack",              // the working title: shown on the splash, the home sign, About, and the home-screen icon label
   logo: ["PACK", "STACK"],         // the wordmark, one word per line
   tagline: "Robot workshop puzzles",
-  version: "1.3.0",
+  version: "1.4.0",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "support@example.com",  // placeholder: put your real support address here before publishing
   credits: [["Game design and direction", "Your name here"], ["Code and art", "Built with Claude"], ["Music", "Bouncy, Chill and Epic styles: written in code for this game. Lo-fi style: recorded tracks by HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
@@ -1682,12 +1687,12 @@ const Core = (() => {
   const SUMS = ["runs", "opened", "lines", "score", "time", "wins", "boosts", "pokes", "crafts"], FLAGS = ["vib", "music", "chat", "ads"], OFFS = ["calm", "lefty"];
   // daily records: each group is [day it belongs to, ...counters for that day]
   const DAYG = [["d"], ["dl", "ds"], ["lg", "ls", "lp"], ["ch"], ["hd", "hu"], ["hb"], ["ad", "an"], ["gf"], ["ev", "eb"], ["pd", "pn"], ["cd", "cn"]];   // cd/cn: ad-offer robot charges taken today
-  const MAXLV = 400;
+  const MAXLV = 1000;   // the most levels a save can hold stars for (the campaign has 600)
   // plain number settings: [what a new player gets, lowest, highest]. In an account merge they follow this device.
   // drag: how a dragged block sits under the finger (0 right under it, 1 lifted half a square, 2 lifted two squares)
   const NUMS = { drag: [1, 0, 2],
     snap: [1, 0, 2],       // Placement help: 0 off, 1 normal, 2 generous (how far a block may be from a free spot and still land there)
-    bgTheme: [0, 0, 15],   // 0 = Auto (follows the world), 1..15 = one chosen theme
+    bgTheme: [0, 0, 45],   // 0 = Auto (follows the world), 1..45 = one chosen theme (1..15 are the first campaign's, 16..45 the looks of worlds 11 to 40)
     bgAnim: [3, 0, 3],     // 0 full, 1 reduced, 2 off, 3 = follow the phone's reduced-motion setting
     bots: [0, 0, 2],       // border robots: 0 on, 1 reduced, 2 off
     botsCrew: [0, 0, 1],   // 1 = show only my crew
@@ -1812,9 +1817,11 @@ const Core = (() => {
     ["best500", "Warming Up", "Score 500 in one Endless run.", "best", 500, { c: 30 }], ["best2k", "Hot Streak", "Score 2,000 in one Endless run.", "best", 2000, { p: 1 }], ["best5k", "Endless Engine", "Score 5,000 in one Endless run.", "best", 5000, { p: 2 }],
     ["score10k", "Ten Thousand Volts", "Score 10,000 points in total.", "score", 10000, { c: 50 }], ["score100k", "Megawatt", "Score 100,000 points in total.", "score", 100000, { s: 80 }],
     ["lv1", "Clocked In", "Clear level 1.", "levels", 1, { c: 20 }], ["world1", "Out of the Meadow", "Clear every level of World 1.", "worlds", 1, { p: 1 }],
-    ["lv50", "Fifty Down", "Clear 50 levels.", "levels", 50, { p: 2 }], ["lv100", "Centurion", "Clear 100 levels.", "levels", 100, { s: 100 }], ["lv150", "Star Forged", "Clear all 150 levels.", "levels", 150, { p: 3, t: "aura" }],
-    ["star30", "Stargazer", "Earn 30 stars.", "stars", 30, { c: 40 }], ["star150", "Constellation", "Earn 150 stars.", "stars", 150, { p: 1 }], ["star450", "Perfect Sky", "Earn all 450 stars.", "stars", 450, { p: 5 }],
-    ["three10", "Clean Work", "Finish 10 levels with 3 stars.", "three", 10, { t: "gold" }], ["boss1", "Boss Bolted", "Beat a boss level.", "boss", 1, { c: 50 }], ["boss15", "Boss of Bosses", "Beat all 15 bosses.", "boss", 15, { p: 3 }],
+    ["lv50", "Fifty Down", "Clear 50 levels.", "levels", 50, { p: 2 }], ["lv100", "Centurion", "Clear 100 levels.", "levels", 100, { s: 100 }], ["lv150", "Star Forged", "Clear 150 levels: the whole first campaign.", "levels", 150, { p: 3, t: "aura" }],
+    ["lv300", "Far From Home", "Clear 300 levels.", "levels", 300, { p: 2 }], ["lv450", "Deep Field", "Clear 450 levels.", "levels", 450, { s: 150 }], ["lv600", "Home Star", "Clear all 600 levels.", "levels", 600, { p: 5 }],
+    ["world20", "Halfway Round", "Clear every level of 20 worlds.", "worlds", 20, { s: 120 }],
+    ["star30", "Stargazer", "Earn 30 stars.", "stars", 30, { c: 40 }], ["star150", "Constellation", "Earn 150 stars.", "stars", 150, { p: 1 }], ["star450", "Perfect Sky", "Earn 450 stars.", "stars", 450, { p: 5 }], ["star900", "Star Chart", "Earn 900 stars.", "stars", 900, { p: 2 }], ["star1800", "Every Last Star", "Earn all 1,800 stars.", "stars", 1800, { p: 5 }],
+    ["three10", "Clean Work", "Finish 10 levels with 3 stars.", "three", 10, { t: "gold" }], ["boss1", "Boss Bolted", "Beat a boss level.", "boss", 1, { c: 50 }], ["boss15", "Boss of Bosses", "Beat 15 bosses.", "boss", 15, { p: 3 }], ["boss30", "Boss Breaker", "Beat 30 bosses.", "boss", 30, { p: 2 }], ["boss60", "No Boss Left", "Beat all 60 bosses.", "boss", 60, { p: 4 }],
     ["wins20", "Twenty Wins", "Win 20 levels (replays count).", "wins", 20, { c: 50 }], ["runs25", "Back for More", "Finish 25 Endless runs.", "runs", 25, { c: 40 }],
     ["bot1", "First Friend", "Collect your first robot.", "cards", 1, { c: 20 }], ["bot8", "Small Crew", "Collect 8 different robots.", "cards", 8, { p: 1 }], ["bot16", "Robot Rally", "Collect 16 different robots.", "cards", 16, { s: 80 }], ["bot24", "Full House", "Collect all 24 pack robots.", "cards", 24, { p: 3 }],
     ["set1", "Matching Set", "Complete a robot set.", "sets", 1, { s: 60 }], ["set4", "Curator", "Complete all 4 robot sets.", "sets", 4, { p: 3 }], ["legend", "Golden Find", "Own a Legend robot.", "legend", 1, { c: 100 }],
@@ -2467,22 +2474,36 @@ const Camp = (() => {
 /*CAMP-END*/
 /*CAMP-START*/
 // Written by tune.js: for each level [move or second limit, how many easing steps the bot asked for, 2-star score, 3-star score].
-const TUNE = [[6,0,0,0],[6,0,0,0],[8,0,0,0],[5,0,0,0],[5,0,0,0],[29,0,0,0],[13,0,0,0],[20,0,0,0],[115,0,0,0],[24,0,0,0],[17,0,0,0],[46,0,0,0],[25,0,0,0],[115,0,0,0],[33,0,0,0],[12,0,0,0],[26,0,0,0],[22,0,0,0],[52,0,0,0],[29,0,0,0],[18,0,0,0],[50,0,0,0],[31,0,0,0],[80,0,0,0],[39,0,0,0],[28,0,0,0],[31,0,0,0],[105,0,0,0],[39,0,0,0],[52,0,0,0],[36,0,0,0],[31,0,0,0],[12,0,0,0],[27,0,0,0],[20,0,0,0],[12,0,0,0],[19,0,0,0],[24,0,0,0],[115,0,0,0],[24,0,0,0],[15,0,0,0],[54,0,0,0],[38,0,0,0],[15,0,0,0],[41,0,0,0],[20,0,0,0],[26,0,0,0],[20,0,0,0],[43,0,0,0],[22,0,0,0],[24,0,0,0],[42,0,0,0],[49,0,0,0],[25,0,0,0],[20,0,0,0],[38,0,0,0],[27,0,0,0],[110,0,0,0],[52,0,0,0],[27,1,0,0],[0,0,410,460],[33,0,0,0],[0,0,360,510],[23,0,0,0],[45,0,0,0],[0,0,360,440],[12,0,0,0],[31,0,0,0],[41,0,0,0],[0,3,220,260],[23,0,0,0],[0,0,360,430],[22,0,0,0],[23,0,0,0],[5,0,0,0],[48,0,0,0],[5,0,0,0],[25,0,0,0],[33,0,0,0],[40,0,0,0],[39,0,0,0],[37,0,0,0],[48,0,0,0],[9,0,0,0],[19,0,0,0],[47,0,0,0],[19,0,0,0],[0,0,480,620],[44,0,0,0],[16,0,0,0],[51,0,0,0],[25,0,0,0],[51,0,0,0],[48,0,0,0],[35,0,0,0],[47,0,0,0],[26,0,0,0],[6,0,0,0],[38,1,0,0],[52,2,0,0],[47,0,0,0],[28,0,0,0],[0,0,550,750],[35,0,0,0],[140,0,0,0],[38,0,0,0],[9,0,0,0],[25,0,0,0],[39,4,0,0],[43,0,0,0],[9,0,0,0],[22,0,0,0],[37,0,0,0],[9,0,0,0],[38,0,0,0],[27,0,0,0],[9,0,0,0],[27,0,0,0],[28,0,0,0],[27,0,0,0],[52,0,0,0],[42,2,0,0],[21,0,0,0],[14,0,0,0],[0,2,480,790],[50,0,0,0],[95,0,0,0],[47,0,0,0],[28,0,0,0],[55,3,0,0],[41,0,0,0],[32,0,0,0],[14,0,0,0],[0,0,930,980],[33,0,0,0],[48,0,0,0],[41,0,0,0],[42,0,0,0],[28,0,0,0],[17,0,0,0],[14,0,0,0],[0,0,880,960],[46,2,0,0],[30,0,0,0],[140,0,0,0],[55,0,0,0],[50,2,0,0],[12,0,0,0],[28,0,0,0],[21,0,0,0]];
+const TUNE = [[6,0,0,0],[6,0,0,0],[8,0,0,0],[5,0,0,0],[5,0,0,0],[29,0,0,0],[13,0,0,0],[20,0,0,0],[115,0,0,0],[24,0,0,0],[17,0,0,0],[46,0,0,0],[25,0,0,0],[115,0,0,0],[33,0,0,0],[12,0,0,0],[26,0,0,0],[22,0,0,0],[52,0,0,0],[29,0,0,0],[18,0,0,0],[50,0,0,0],[31,0,0,0],[80,0,0,0],[39,0,0,0],[28,0,0,0],[31,0,0,0],[105,0,0,0],[39,0,0,0],[52,0,0,0],[36,0,0,0],[31,0,0,0],[12,0,0,0],[27,0,0,0],[20,0,0,0],[12,0,0,0],[19,0,0,0],[24,0,0,0],[115,0,0,0],[24,0,0,0],[15,0,0,0],[54,0,0,0],[38,0,0,0],[15,0,0,0],[41,0,0,0],[20,0,0,0],[26,0,0,0],[20,0,0,0],[43,0,0,0],[22,0,0,0],[24,0,0,0],[42,0,0,0],[49,0,0,0],[25,0,0,0],[20,0,0,0],[38,0,0,0],[27,0,0,0],[110,0,0,0],[52,0,0,0],[27,1,0,0],[0,0,410,460],[33,0,0,0],[0,0,360,510],[23,0,0,0],[45,0,0,0],[0,0,360,440],[12,0,0,0],[31,0,0,0],[41,0,0,0],[0,3,220,260],[23,0,0,0],[0,0,360,430],[22,0,0,0],[23,0,0,0],[5,0,0,0],[48,0,0,0],[5,0,0,0],[25,0,0,0],[33,0,0,0],[40,0,0,0],[39,0,0,0],[37,0,0,0],[48,0,0,0],[9,0,0,0],[19,0,0,0],[47,0,0,0],[19,0,0,0],[0,0,480,620],[44,0,0,0],[16,0,0,0],[51,0,0,0],[25,0,0,0],[51,0,0,0],[48,0,0,0],[35,0,0,0],[47,0,0,0],[26,0,0,0],[6,0,0,0],[38,1,0,0],[52,2,0,0],[47,0,0,0],[28,0,0,0],[0,0,550,750],[35,0,0,0],[140,0,0,0],[38,0,0,0],[9,0,0,0],[25,0,0,0],[39,4,0,0],[43,0,0,0],[9,0,0,0],[22,0,0,0],[37,0,0,0],[9,0,0,0],[38,0,0,0],[27,0,0,0],[9,0,0,0],[27,0,0,0],[28,0,0,0],[27,0,0,0],[52,0,0,0],[42,2,0,0],[21,0,0,0],[14,0,0,0],[0,2,480,790],[50,0,0,0],[95,0,0,0],[47,0,0,0],[28,0,0,0],[55,3,0,0],[41,0,0,0],[32,0,0,0],[14,0,0,0],[0,0,930,980],[33,0,0,0],[48,0,0,0],[41,0,0,0],[42,0,0,0],[28,0,0,0],[17,0,0,0],[14,0,0,0],[0,0,880,960],[46,2,0,0],[30,0,0,0],[140,0,0,0],[55,0,0,0],[50,2,0,0],[12,0,0,0],[28,0,0,0],[21,0,0,0],[28,0,0,0],[18,0,0,0],[46,0,0,0],[105,0,0,0],[53,0,0,0],[26,0,0,0],[44,0,0,0],[48,0,0,0],[46,0,0,0],[19,0,0,0],[25,0,0,0],[54,0,0,0],[26,0,0,0],[12,0,0,0],[31,0,0,0],[22,0,0,0],[0,0,320,380],[44,1,0,0],[17,0,0,0],[20,0,0,0],[14,0,0,0],[85,0,0,0],[33,0,0,0],[55,0,0,0],[55,0,0,0],[30,0,0,0],[41,0,0,0],[27,0,0,0],[47,0,0,0],[27,0,0,0],[38,0,0,0],[35,0,0,0],[70,0,0,0],[9,0,0,0],[30,1,0,0],[28,0,0,0],[47,0,0,0],[23,0,0,0],[23,1,0,0],[23,0,0,0],[25,0,0,0],[26,0,0,0],[21,0,0,0],[27,0,0,0],[41,0,0,0],[47,0,0,0],[40,0,0,0],[31,0,0,0],[37,0,0,0],[20,0,0,0],[32,0,0,0],[14,0,0,0],[25,0,0,0],[29,0,0,0],[95,0,0,0],[23,0,0,0],[0,1,390,410],[27,0,0,0],[30,0,0,0],[21,0,0,0],[22,0,0,0],[27,0,0,0],[150,0,0,0],[20,0,0,0],[21,0,0,0],[28,0,0,0],[30,1,0,0],[28,0,0,0],[50,0,0,0],[17,0,0,0],[0,0,450,480],[54,0,0,0],[12,0,0,0],[26,0,0,0],[30,0,0,0],[50,0,0,0],[25,0,0,0],[32,0,0,0],[12,2,0,0],[34,0,0,0],[9,0,0,0],[0,0,370,420],[52,0,0,0],[31,0,0,0],[28,0,0,0],[100,0,0,0],[28,0,0,0],[49,0,0,0],[0,0,500,540],[23,0,0,0],[51,0,0,0],[40,0,0,0],[36,0,0,0],[29,0,0,0],[26,0,0,0],[95,0,0,0],[27,0,0,0],[52,0,0,0],[52,0,0,0],[19,0,0,0],[16,0,0,0],[32,0,0,0],[9,0,0,0],[45,0,0,0],[48,0,0,0],[28,0,0,0],[9,0,0,0],[44,0,0,0],[50,0,0,0],[24,0,0,0],[49,1,0,0],[38,0,0,0],[39,0,0,0],[0,0,420,430],[51,0,0,0],[26,0,0,0],[25,0,0,0],[75,0,0,0],[50,0,0,0],[26,0,0,0],[51,1,0,0],[36,0,0,0],[12,0,0,0],[34,0,0,0],[31,0,0,0],[47,1,0,0],[75,0,0,0],[51,0,0,0],[55,0,0,0],[16,0,0,0],[33,0,0,0],[17,0,0,0],[25,0,0,0],[22,0,0,0],[34,0,0,0],[25,0,0,0],[25,0,0,0],[54,0,0,0],[130,1,0,0],[21,2,0,0],[12,0,0,0],[41,0,0,0],[21,0,0,0],[14,0,0,0],[31,0,0,0],[16,0,0,0],[0,1,370,440],[29,0,0,0],[27,0,0,0],[18,0,0,0],[51,0,0,0],[145,0,0,0],[22,0,0,0],[51,0,0,0],[26,0,0,0],[20,0,0,0],[30,0,0,0],[14,0,0,0],[39,0,0,0],[31,0,0,0],[36,0,0,0],[25,0,0,0],[37,0,0,0],[0,2,300,380],[37,0,0,0],[27,0,0,0],[90,0,0,0],[49,0,0,0],[27,1,0,0],[25,0,0,0],[0,2,310,350],[6,0,0,0],[30,0,0,0],[34,0,0,0],[49,0,0,0],[23,0,0,0],[48,0,0,0],[21,0,0,0],[33,0,0,0],[20,0,0,0],[18,0,0,0],[15,0,0,0],[53,1,0,0],[33,0,0,0],[25,0,0,0],[80,0,0,0],[16,0,0,0],[24,0,0,0],[22,0,0,0],[22,0,0,0],[35,0,0,0],[27,0,0,0],[14,0,0,0],[43,0,0,0],[36,0,0,0],[21,0,0,0],[32,0,0,0],[49,1,0,0],[27,0,0,0],[46,0,0,0],[0,0,370,440],[65,0,0,0],[28,0,0,0],[30,0,0,0],[54,0,0,0],[18,0,0,0],[24,0,0,0],[28,0,0,0],[23,0,0,0],[17,0,0,0],[38,0,0,0],[15,0,0,0],[0,0,450,530],[47,1,0,0],[14,0,0,0],[27,0,0,0],[115,0,0,0],[52,0,0,0],[29,0,0,0],[14,0,0,0],[36,0,0,0],[20,0,0,0],[0,0,450,490],[43,0,0,0],[39,0,0,0],[40,0,0,0],[49,0,0,0],[18,0,0,0],[0,2,210,260],[21,0,0,0],[140,0,0,0],[24,0,0,0],[37,0,0,0],[38,0,0,0],[24,0,0,0],[24,0,0,0],[35,1,0,0],[40,0,0,0],[38,0,0,0],[16,0,0,0],[51,0,0,0],[31,1,0,0],[27,0,0,0],[52,1,0,0],[35,0,0,0],[28,0,0,0],[42,0,0,0],[145,0,0,0],[30,0,0,0],[24,0,0,0],[9,0,0,0],[34,0,0,0],[26,0,0,0],[26,0,0,0],[27,0,0,0],[50,0,0,0],[29,0,0,0],[36,0,0,0],[21,0,0,0],[25,0,0,0],[12,0,0,0],[22,0,0,0],[21,0,0,0],[23,0,0,0],[44,0,0,0],[24,0,0,0],[75,0,0,0],[0,1,430,470],[32,0,0,0],[18,0,0,0],[18,0,0,0],[27,0,0,0],[23,0,0,0],[140,0,0,0],[43,0,0,0],[15,0,0,0],[12,0,0,0],[31,0,0,0],[24,0,0,0],[25,0,0,0],[29,0,0,0],[36,0,0,0],[49,0,0,0],[37,1,0,0],[28,0,0,0],[37,0,0,0],[52,0,0,0],[9,0,0,0],[27,0,0,0],[14,0,0,0],[52,0,0,0],[0,2,310,390],[46,0,0,0],[125,0,0,0],[59,0,0,0],[12,0,0,0],[21,1,0,0],[27,0,0,0],[32,0,0,0],[31,0,0,0],[55,0,0,0],[0,0,380,410],[30,0,0,0],[31,0,0,0],[42,0,0,0],[16,0,0,0],[32,0,0,0],[37,0,0,0],[27,0,0,0],[25,0,0,0],[33,0,0,0],[31,2,0,0],[15,0,0,0],[105,0,0,0],[55,0,0,0],[31,0,0,0],[9,0,0,0],[0,0,390,420],[140,0,0,0],[29,0,0,0],[29,0,0,0],[55,0,0,0],[39,0,0,0],[28,0,0,0],[53,0,0,0],[54,0,0,0],[18,0,0,0],[31,0,0,0],[53,0,0,0],[20,0,0,0],[23,0,0,0],[18,0,0,0],[24,0,0,0],[28,0,0,0],[35,0,0,0],[23,0,0,0],[41,0,0,0],[105,0,0,0],[24,0,0,0],[12,0,0,0],[25,0,0,0],[33,0,0,0],[18,0,0,0],[31,0,0,0],[49,0,0,0],[25,0,0,0],[36,0,0,0],[28,0,0,0],[39,0,0,0],[18,0,0,0],[21,0,0,0],[45,0,0,0],[41,0,0,0],[18,0,0,0],[0,1,360,400],[25,0,0,0],[24,0,0,0],[85,0,0,0],[33,0,0,0],[21,0,0,0],[29,0,0,0],[18,0,0,0],[55,0,0,0],[130,0,0,0],[29,0,0,0],[25,0,0,0],[30,2,0,0],[25,0,0,0],[0,0,420,500],[37,0,0,0],[55,0,0,0],[12,0,0,0],[41,0,0,0],[14,0,0,0],[18,0,0,0],[42,0,0,0],[13,0,0,0],[9,0,0,0],[34,0,0,0],[31,0,0,0],[21,0,0,0],[31,0,0,0],[0,2,320,370],[31,0,0,0],[33,0,0,0],[30,0,0,0],[105,0,0,0],[39,0,0,0],[45,0,0,0],[14,0,0,0],[54,0,0,0],[110,0,0,0],[27,0,0,0],[18,0,0,0],[42,0,0,0],[27,0,0,0],[23,0,0,0],[27,0,0,0],[36,1,0,0],[22,0,0,0],[0,0,460,520],[0,0,430,500],[26,0,0,0],[43,0,0,0],[17,0,0,0],[21,0,0,0],[21,0,0,0],[24,0,0,0],[145,0,0,0],[20,0,0,0],[24,0,0,0],[9,0,0,0],[31,0,0,0],[0,2,290,310],[0,0,420,480],[38,0,0,0],[41,0,0,0],[36,0,0,0],[28,0,0,0],[31,0,0,0],[26,0,0,0],[44,0,0,0],[24,0,0,0],[22,0,0,0],[15,0,0,0],[19,0,0,0],[80,0,0,0],[28,0,0,0],[42,0,0,0],[16,0,0,0],[27,0,0,0],[31,0,0,0],[59,0,0,0],[23,0,0,0],[44,0,0,0],[28,0,0,0],[24,0,0,0],[21,0,0,0],[42,0,0,0],[31,0,0,0],[50,0,0,0],[25,0,0,0],[0,0,440,530],[33,0,0,0],[135,0,0,0],[13,0,0,0],[23,1,0,0],[18,0,0,0],[0,1,470,570],[16,0,0,0]];
 /*CAMP-END*/
 /*CAMP-START*/
 // The campaign as data. SCHED has one short recipe per level; build() turns a recipe into a full level config.
-// To add levels: add recipes to SCHED (and a world to WORLDS for every 15), then run tune.js so the bot sets fair limits.
+// To add levels: add recipes after the first 150 (and a world to WORLDS for every 15), then run tune.js so the bot sets fair limits.
+// Levels 1 to 150 are the first campaign and are frozen: their recipes, boards and limits never change, so nobody's stars change meaning.
+// Levels 151 and up are written by gen-levels.js (the bot plays every candidate before it is kept).
 //   recipe = goals ~ twists.   goals: one or two, joined by +.   twists: joined by commas.
 //   goals:  S score | L lines | G:pattern marked gems | R:pattern stone | I:pattern ice | M2 M2x2 M3 combos | C colour lines | K streak
 //           V survive | E6 empty the board (a puzzle solved with 6 blocks) | X2 collect 2 items | B5 set off 5 boosts.   A "t" after the letter (St, Lt) = timed.
-//   twists: rot mov fog lock clk rise drop junk pre (boosts already on the board), and the boss-only ones in BOSS below.
+//   twists: rot mov fog lock clk rise drop junk pre (boosts already on the board), and the special ones in SPECIAL below: each boss of
+//           the first campaign has one, and from level 151 they come back on ordinary levels and, two at a time, on the new bosses.
 const Levels = (() => {
-  const K = Camp.K, N = 8, NN = 64, PER = 15;
+  const K = Camp.K, N = 8, NN = 64, PER = 15, BASE = 150;   // BASE: how long the first campaign is
   const WORLDS = [
     ["Scrap Meadow", "#3FA66B", "#134B3C", "#3CCB7F"], ["Copper Canyon", "#C8672F", "#5A2518", "#FF8A3D"], ["Frost Works", "#4FA3E0", "#173A78", "#59B8FF"],
     ["Tide Lab", "#1F8FA6", "#0C3550", "#3FD0E0"], ["Cloud Foundry", "#6DB6E8", "#28498A", "#8FD3FF"], ["Clockwork Keep", "#B8922F", "#46300F", "#FFC53D"],
     ["Magnet Marsh", "#22968E", "#103B4A", "#2FD6C7"], ["Crystal Caves", "#7650D8", "#27125F", "#A77BFF"], ["Storm Spire", "#4A59A0", "#13183C", "#7F92FF"],
-    ["Star Forge", "#D0432F", "#4A0E28", "#FF6A4D"]
+    ["Star Forge", "#D0432F", "#4A0E28", "#FF6A4D"],
+    // worlds 11 to 40
+    ["Ember Vale", "#D8572A", "#4A1410", "#FF7A3C"], ["Glass Dunes", "#D9A24A", "#5E3A1A", "#FFD76A"], ["Mossy Vault", "#5E9A4A", "#1E3A22", "#8FE06A"],
+    ["Lantern Harbor", "#3A6FA8", "#101E3A", "#FFC85A"], ["Brass Hive", "#C9972A", "#4A2E0A", "#FFD24A"], ["Thunder Mesa", "#8A5AA8", "#2A1440", "#C79AFF"],
+    ["Coral Garden", "#E0668C", "#5A1A40", "#FF9FC0"], ["Aurora Ridge", "#3AB89C", "#0E2A3A", "#7FFFD8"], ["Echo Halls", "#A8805E", "#3A2418", "#F0C89A"],
+    ["Rust Orchard", "#C8703A", "#3E1E10", "#FF9A5A"], ["Opal Lagoon", "#5FB8C4", "#1E4A5A", "#B8F4F0"], ["Windmill Heights", "#7FA83E", "#2A4A1E", "#C8F07A"],
+    ["Twilight Bazaar", "#B85A9A", "#3A1438", "#FF8AD0"], ["Quartz Quarry", "#9A92B4", "#3A3450", "#E6DCFF"], ["Meteor Fields", "#6A7AB0", "#141A30", "#A8C0FF"],
+    ["Nebula Garden", "#A86AD8", "#241048", "#E0A8FF"], ["Iron Glacier", "#6FA4C0", "#1A3448", "#C8ECFF"], ["Sunsail Docks", "#E08A3E", "#5A2A1A", "#FFC07A"],
+    ["Gravity Well", "#5A6AD8", "#0E1038", "#8FA0FF"], ["Geyser Flats", "#4FA890", "#1A4038", "#A8F0D8"], ["Circuit Grove", "#2EB868", "#0A2A1E", "#7AFFA8"],
+    ["Amber Mines", "#D0902E", "#3A2008", "#FFC85A"], ["Cobalt Peaks", "#4A7AE0", "#101E50", "#7AA8FF"], ["Mirage Oasis", "#2EAC9E", "#1A4A4A", "#7AF0E0"],
+    ["Tempest Reach", "#5A7A9A", "#0E1A2A", "#9AC8F0"], ["Prism Terrace", "#D06AB8", "#3A1450", "#FFB0F0"], ["Obsidian Gate", "#A03A4A", "#1A0810", "#FF6A7A"],
+    ["Comet Trail", "#3FA8D8", "#0A2440", "#A8ECFF"], ["Silent Moon", "#9A9AAE", "#2A2A3A", "#E8E8F8"], ["Home Star", "#E8A82A", "#5A2E08", "#FFE27A"]
   ].map(([n, a, b, t]) => ({ n, a, b, t }));
   const SCHED = (
     "L S G:t3 M2 B1 S G:bar L~pre St G:diamond~grav " +
@@ -2501,6 +2522,40 @@ const Levels = (() => {
     "R:x+I:corners~mov M3+S~lock E9 V+C~fog X3+L~mov S+K~mov,drop R:fort+L~clk I:ring+X2~lock C+M2~lock,fog S+L~mirror " +
     "E9 V+S~mov,junk G:checker+I:x~rot M3+C~drop St+L~clk,mov X4~lock,drop R:fort+I:frame~fog E8~lock L+K~rise,lock R:fort+X3~final"
   ).split(" ");
+  // ---- levels 151 and up: written by gen-levels.js, then tuned by tune.js like the rest ----
+  SCHED.push(.../*GEN-SCHED*/(
+    "L M2x2~drop S+L~drop Ct S+C L~drop R:windows~junk X4 S+K~drop L~mirror,freeze B6~drop,pre I:corners~junk I:dots E8~lock X2+S~drop,pre " +
+    "C V+S~fog K G:corners~fog L+C~big,grav E9 It:cup I:vee~pre K+L R:rails+X2~pre L~fog X2~fog M2x3~pre R:x+L~pre L~quake,grav " +
+    "I:x G:vee+L~rise Lt~pre E6~lock K~rise I:comb~lock B8~drop M2x3 K+L~rise G:arrow~one,rain I:ladder X2 G:ring~rise G:diamond+L~lock R:corners+S~lock " +
+    "R:ring X3~mov G:cup+S~drop G:zig~mov C~sudden,rain X2~drop E9 C~drop M3~pre It:dots~mov C~pre V L+C~mov G:comb+S~mov,drop C~dark,grav " +
+    "C~rot L~rot St M2x2~rot G:ladder~rot G:plus~rot K~pre M2x3~rot S+K~pre S~mirror,big V+M2~clk X4 E8~lock C+M2 L+C~rot " +
+    "S~junk L~mov B5~drop X3~grav L+C~freeze,quake E6 V+C~mov K+S~mov R:crown I:windows+L It:ring~mov C+K~mov I:stairs~mov V+S~mov,pre L~creep,grav " +
+    "R:checker X2~rise G:frame~pre C~freeze C+M2 Ct~pre G:diamond S~rise I:slash+G:core~pre,rise L+C~rot2,mirror M3~pre L+K~rise E6~lock R:smile+C X2+S~pre,rise " +
+    "I:dots~fog E6~lock R:vee+C~fog R:fort+X2 G:ladder+L~sudden,one S C+S X3 V+S R:pillars~clk S~mirror B6~drop,pre Lt~clk R:stairs+S~clk S+L~tide,mirror " +
+    "I:x~lock R:bars~lock E8~lock G:rails+S~lock I:windows K Lt~pre X4~lock I:smile+X2~lock G:comb~storm,mirror M3~lock M2x2~big G:plus~lock G:arrow+M2 G:comb+S~lock,pre " +
+    "L~junk G:vee+C~drop S~creep It:frame M3~big,rain E8~lock X3 C+K~pre G:core C+M2~drop M2x2~pre V+M2 L~drop I:comb+G:core~drop L~quake,mirror " +
+    "G:x St~fog C+L X3~fog R:ladder~quake C+K~mov B6~drop E9 R:stairs+S~fog L~dark,freeze G:frame C+M2~mov R:vee~mov V R:windows+C~mov,pre " +
+    "L~rot Ct R:bolt~drop K+C L+C~rot2,grav V~drop E4~lock L~one B6~drop S+L~drop G:windows+M2~rot X4 G:crown M3+S~drop,pre G:tee+L~one,grav " +
+    "I:bars E10~lock G:x G:stairs+M2 I:ladder Lt~clk G:core G:crown+C~lock R:wall+L~clk,pre L+C~tide,freeze M2x4~lock M2x3~pre M3~rain X3~lock M3+S~lock " +
+    "C~junk G:ring S+K C+L~pre R:x~creep,mirror V~junk It:bars G:plus~junk B5~drop S~rise E12 X3~grav L+K~rise G:arrow+M2~pre G:comb~sudden,grav " +
+    "R:ladder~drop E10~lock V+M2~drop R:checker~drop G:corners~dark M3 Gt:frame~pre K L+C~drop G:rails+L~storm,quake G:windows+S X2 V+C~mov I:corners~mov L+K~drop,pre " +
+    "I:comb~lock R:fort~lock E12 V~fog L~rain,quake St C+L~lock M3+S X3+L~fog S~mirror B5~drop,pre I:x~lock X2~fog X2+S~fog,lock G:bolt~dark,mirror " +
+    "S~rise K~rise I:plus~rise X3+L~rise G:zig+C L X2~rise St~clk I:dots+G:core~clk L~big,quake E6 L~freeze M2x3~pre G:ladder M3+C~pre " +
+    "G:checker~pre I:windows+L~pre R:pillars C+L~pre C~rot2,freeze E8~lock G:arrow M3~big C~rot X2+S B6~drop,pre Lt V~pre G:ring+S~pre L~one,mirror " +
+    "G:core~mov L~junk R:crown~junk St~mov X3 X3~grav E8~lock B5~drop G:plus+M2~mov,pre L+C~nopow,big C+K R:cup~quake X2+S R:slash L+C~junk " +
+    "I:cup S~creep E6~lock M3 G:cup+L~tide,big R:smile~rise V+L~drop X4~drop St~drop K+L~rise R:rails~drop L~rain L+C~rise G:diamond+S~drop L+C~creep,quake " +
+    "R:ring~clk V+L~clk G:zig~mirror L~one,fog G:slash~clk M3~pre X2 I:vee~clk C+M2~pre S+L~sudden,mirror G:stairs K~pre E10~lock St~pre I:ring+X2~fog,pre " +
+    "L~lock E6~lock V+C~junk St~junk S~rain,grav L~dark K+L~pre B8~drop L~creep R:vee+L X2 I:bars~lock I:tee~lock R:x+I:vee~lock,pre C~dark,quake " +
+    "C~rise G:tee~rot C+K~pre L+C~rot X3~rise C~big,rise M3x2~pre Ct~pre C+M2~rot G:bolt~storm,grav I:plus~rise G:vee~freeze,rot E12 G:windows R:bars+L~rise " +
+    "G:ladder~fog G:zig+L~fog M2x4~pre I:corners C~rot2,big C+L~fog G:x~fog R:windows~quake,fog E12 V+C L~rain I:dots~drop It:comb~drop X2+S~fog G:tee+L~one,freeze " +
+    "L~mov E12 S~mov It:stairs~pre B6~drop,pre I:ladder~mov K+L L~grav,clk V+C~clk,mov G:cup~freeze,creep X4 G:bolt~grav,mov R:corners+I:slash~mov G:core~mov G:corners+M2~mov " +
+    "G:frame R:ladder~mirror E6 B6~drop L~nopow,dark R:wall~one,pre I:windows~lock V~pre G:crown~pre C+K L+K St~pre R:fort X3+L~pre G:ring+L~tide,rain " +
+    "S Gt:diamond L~creep,rot E12 X4 G:cup~junk C+M2~pre L~dark,rot I:corners+G:core~rot,junk C~sudden,quake V+M2~junk V+C~junk M3 R:cup I:bars+G:core~rot,pre " +
+    "C G:plus C~freeze St S~mirror,rain G:comb~mov E6 B5~drop V V+S~mov C+S~mov R:pillars~quake G:stairs~mov C+M2~mov,pre L~big,freeze " +
+    "L X2~drop L~big C E10~lock G:cup~drop Lt~pre L+C~clk I:slash+L~drop L+C~mirror,grav X3~grav,drop C+K~drop K M2x3~drop S+K~drop,pre " +
+    "I:dots S~mirror M3~pre R:slash~rot L+C~one,quake R:slash+I:windows~fog M2x3 V+M2 X3~fog St~rot I:bars~fog B10~rain,rot E12 V+L~fog,pre R:fort+X3~final,mirror"
+  )/*END*/.split(" "));
+  const BOSS2 = /*GEN-BOSS*/{ 160: "Frozen Mirror", 170: "Falling Giants", 180: "Landslide", 190: "Lucky Dip", 200: "Speed Sparkle", 210: "Cave-In", 220: "Twin Giants", 230: "Ice Slide", 240: "Rockfall", 250: "Kaleidoscope", 260: "Quick Draw", 270: "Twin Tides", 280: "Scrap Mirror", 290: "Heavy Rain", 300: "Aftershock", 310: "Black Ice", 320: "Tumbler", 330: "Drip Feed", 340: "Glacier", 350: "Stone Garden", 360: "Avalanche", 370: "Shaker", 380: "Sparkle Shuffle", 390: "Shadow Twin", 400: "Bulldozer", 410: "Frost Wheel", 420: "Echo", 430: "Bare Hands", 440: "Flood Wall", 450: "Tumbling Stones", 460: "Double Time", 470: "Spark Fall", 480: "Blind Shuffle", 490: "Scrap Slide", 500: "Heavy Turn", 510: "Cold Draw", 520: "Permafrost", 530: "Solo Night", 540: "Treasure Tide", 550: "Rush Hour", 560: "Double Sparkle", 570: "Iceberg", 580: "Mirror Fall", 590: "Tightrope", 600: "Home Star" }/*END*/;   // the new bosses' names; their rule text is put together from the special rules they combine
   // every 10th level is a boss with a rule no other level has
   const BOSS = {
     10: ["Gravity", "After every clear, the blocks above fall down."], 20: ["Turntable", "The board turns a quarter turn every 2 moves."],
@@ -2512,8 +2567,27 @@ const Levels = (() => {
     130: ["Creeping Stone", "New stones keep growing while you work. Clear every one."], 140: ["Mirror", "Every block you place is copied on the other side."],
     150: ["The Core", "Gravity, a turning board and moving blocks, all at once."]
   };
+  // The special rules. Each started life as the one-off rule of a boss in the first campaign.
+  const SPECIAL = {
+    grav: ["Gravity", "After every clear, the blocks above fall down."], rot2: ["Turntable", "The board turns a quarter turn every 2 moves."],
+    one: ["One at a Time", "You only get one block at a time."], freeze: ["Big Freeze", "Every 3 moves a gem freezes into ice."],
+    dark: ["Blackout", "You can only see around the block you just placed."], rain: ["Boost Rain", "A boost tile drops in after every move."],
+    storm: ["Junk Storm", "Junk lands after every single move."], sudden: ["Countdown", "Every move is on a clock. Too slow costs you 2 moves."],
+    tide: ["Rising Tide", "A row of gems keeps rising from below. Clears let the pile fall. Do not let it reach the top."], nopow: ["Jammed", "Your robots' powers are jammed."],
+    big: ["Giants", "Only big blocks here."], quake: ["Quake", "Every 3 moves the whole board slides one step sideways."],
+    creep: ["Creeping Stone", "New stones keep growing while you work."], mirror: ["Mirror", "Every block you place is copied on the other side."],
+    final: ["The Core", "Gravity, a turning board and moving blocks, all at once."]
+  };
+  const PLAIN = { rot: "The board turns every few moves.", mov: "Some blocks move by themselves.", fog: "Part of the board is hidden in fog.", lock: "One block slot is locked.", junk: "Junk keeps landing.", drop: "Boost tiles drop in as you play.", clk: "Every move is on a clock.", rise: "Rows of gems rise from below." };
+  const twistsOf = spec => (spec.split("~")[1] || "").split(",").filter(Boolean);
+  const ruleOf = spec => twistsOf(spec).map(k => (SPECIAL[k] ? SPECIAL[k][1] : PLAIN[k] || "")).filter(Boolean).join(" ");
   const count = SCHED.length;
+  Object.keys(BOSS2).forEach(id => { BOSS[id] = [BOSS2[id], ruleOf(SCHED[id - 1])]; });
   const world = id => Math.min(WORLDS.length - 1, Math.floor((id - 1) / PER)), boss = id => !!BOSS[id];
+  // How far along a level is, as one number: it scales the goals, the mix of blocks and how crowded the board starts.
+  // The first campaign runs from 0 (level 1) to 1 (level 150) and that never changes. After it, every world starts a good deal
+  // gentler than the one before ended and climbs again, and each new world sits a touch higher than the last.
+  const tOf = id => { if (id <= BASE) return (id - 1) / (BASE - 1); const w = world(id) - BASE / PER, j = (id - 1) % PER; return Math.min(1.12, .64 + .34 * j / (PER - 1) + .004 * w); };
   const far = (r, c) => Math.max(Math.abs(r - 3.5), Math.abs(c - 3.5));
   const PAT = {
     t3: (r, c) => (r === 7 && c <= 5) || (c === 0 && r >= 3), bar: (r, c) => r === 6 && c >= 1 && c <= 6, dots: (r, c) => r % 3 === 1 && c % 3 === 1,
@@ -2521,7 +2595,16 @@ const Levels = (() => {
     diamond: (r, c) => Math.abs(r - 3.5) + Math.abs(c - 3.5) <= 3, pillars: (r, c) => c % 3 === 1 && r >= 4, wall: (r, c) => r === 4 || r === 5,
     ring: (r, c) => far(r, c) === 2.5, x: (r, c) => r === c || r + c === 7, fort: (r, c) => far(r, c) === 2.5 || far(r, c) === .5, frame: (r, c) => far(r, c) === 3.5,
     checker: (r, c) => (r + c) % 2 === 0 && r >= 3, zig: (r, c) => r >= 2 && (r % 2 ? c % 4 === 2 : c % 4 === 0), bars: (r, c) => r === 2 || r === 5,
-    core: (r, c) => far(r, c) <= 1.5, vault: (r, c) => r === 5
+    core: (r, c) => far(r, c) <= 1.5, vault: (r, c) => r === 5,
+    // shapes first used after level 150
+    stairs: (r, c) => r >= 1 && (c === r || c === r - 1), rails: (r, c) => c === 1 || c === 6, tee: (r, c) => (r === 1 && c >= 1 && c <= 6) || ((c === 3 || c === 4) && r >= 2),
+    arrow: (r, c) => (r === 1 && (c === 3 || c === 4)) || (r === 2 && c >= 2 && c <= 5) || (r === 3 && c >= 1 && c <= 6) || ((c === 3 || c === 4) && r >= 4 && r <= 6),
+    cup: (r, c) => ((c === 1 || c === 6) && r >= 2 && r <= 6) || (r === 6 && c >= 2 && c <= 5), windows: (r, c) => (r === 1 || r === 2 || r === 5 || r === 6) && (c === 1 || c === 2 || c === 5 || c === 6),
+    slash: (r, c) => r + c === 7 || r + c === 8, vee: (r, c) => r >= 2 && r <= 6 && (Math.abs(c - 3.5) + .5 === 7 - r || Math.abs(c - 3.5) + .5 === 6 - r),
+    ladder: (r, c) => ((c === 2 || c === 5) && r >= 1 && r <= 6) || ((r === 2 || r === 5) && (c === 3 || c === 4)), comb: (r, c) => r === 6 || (c % 2 === 0 && r >= 3 && r <= 5),
+    crown: (r, c) => ((r === 4 || r === 5) && c >= 1 && c <= 6) || (r === 3 && (c === 1 || c === 3 || c === 4 || c === 6)) || (r === 2 && (c === 1 || c === 6)),
+    bolt: (r, c) => (r === 1 && (c === 4 || c === 5)) || (r === 2 && (c === 3 || c === 4)) || (r === 3 && c >= 2 && c <= 5) || (r === 4 && (c === 3 || c === 4)) || (r === 5 && (c === 2 || c === 3)) || (r === 6 && (c === 1 || c === 2)),
+    smile: (r, c) => (r === 2 && (c === 2 || c === 5)) || (r === 5 && c >= 2 && c <= 5) || (r === 4 && (c === 1 || c === 6))
   };
   // the first blocks of the five teaching levels are fixed, so the lesson always works
   const FIRST = { 1: [1, 1, 9], 2: [3, 3, 9], 3: [1, 4, 0], 4: [9, 3, 2], 5: [1, 3, 9] };   // places in Core.SHAPES: 0 single, 1 two across, 2 two down, 3 three across, 4 three down, 9 square
@@ -2532,9 +2615,10 @@ const Levels = (() => {
   const tuned = id => (typeof TUNE !== "undefined" && TUNE[id - 1]) || null;
 
   function build(id, ease) {
-    const tn = tuned(id), e = ease == null ? (tn ? tn[1] : 0) : ease, f = Math.pow(.86, e), t = (id - 1) / (count - 1), R = rng(id * 7919 + 13);
+    const tn = tuned(id), e = ease == null ? (tn ? tn[1] : 0) : ease, f = Math.pow(.86, e), t = tOf(id), R = rng(id * 7919 + 13);
     const [gp, tp] = SCHED[id - 1].split("~"), toks = tp ? tp.split(",") : [], has = k => toks.includes(k);
-    const cfg = { id, world: world(id), boss: BOSS[id] ? BOSS[id][0] : "", rule: BOSS[id] ? BOSS[id][1] : "", spec: SCHED[id - 1], ease: e, goals: [], moves: 0, time: 0, g: new Array(NN).fill(0), k: new Array(NN).fill(0), pool: [12 - 6.5 * t, 8, (2 + 7.5 * t) * f], rc: 0, tw: {}, fog: null, s2: 0, s3: 0, first: FIRST[id] || null, tips: [] };
+    const sp = BOSS[id] ? [] : toks.filter(k => SPECIAL[k]);   // an ordinary level with a special rule (only after the first campaign) names it on its start card
+    const cfg = { id, world: world(id), boss: BOSS[id] ? BOSS[id][0] : "", rule: BOSS[id] ? BOSS[id][1] : sp.map(k => SPECIAL[k][1]).join(" "), twist: sp.map(k => SPECIAL[k][0]).join(" + "), spec: SCHED[id - 1], ease: e, goals: [], moves: 0, time: 0, g: new Array(NN).fill(0), k: new Array(NN).fill(0), pool: [12 - 6.5 * t, 8, (2 + 7.5 * t) * f], rc: 0, tw: {}, fog: null, s2: 0, s3: 0, first: FIRST[id] || null, tips: [] };
     const g = cfg.g, kd = cfg.k, tw = cfg.tw, gem = () => 1 + Math.floor(R() * 7), free = () => { const a = []; for (let i = 0; i < NN; i++) if (!g[i]) a.push(i); return a; };
     const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
     const lay = (name, n, kind) => {   // up to n squares of a pattern, on empty squares only
@@ -2636,7 +2720,7 @@ const Levels = (() => {
   const live = { pool: [16, 90], salt: 0, event: [60, 70, 90, 110, 120, 140] };
   const dailyId = day => live.pool[0] + hash(day + live.salt) % (live.pool[1] - live.pool[0] + 1);
   const eventId = week => live.event[hash(week + 7) % live.event.length];
-  return { count, PER, WORLDS, SCHED, BOSS, PAT, world, boss, build, get, hash, dailyId, eventId, live };
+  return { count, PER, BASE, WORLDS, SCHED, BOSS, SPECIAL, PAT, world, boss, build, get, hash, dailyId, eventId, live, t: tOf, ruleOf, forget: id => { delete cache[id]; } };
 })();
 /*CAMP-END*/
 
@@ -4574,21 +4658,32 @@ function playLabel() {
   if (S.lrun && !S.lrun.over) return "Resume level " + S.lrun.lv.id;
   return Core.cleared(m) >= total ? "All " + total + " levels cleared" : "Level " + Core.nextLevel(m, total);
 }
+// The map shows every world the player has reached plus the next one. The worlds beyond wait behind a plate at the top, so a campaign of
+// 600 levels opens as fast as a short one. A world's picture is only painted when its stretch of the map comes near the screen.
+const mapWorlds = m => Math.min(Levels.WORLDS.length, Levels.world(Math.min(Levels.count, Math.max(Core.nextLevel(m, Levels.count), m.stars.length))) + 2);
+function mapBands() {
+  const body = $("sheetBody"); if (!body || !body.classList.contains("mapwrap")) return;
+  const a = body.scrollTop - body.clientHeight, z = body.scrollTop + body.clientHeight * 2;
+  body.querySelectorAll(".wband:not([data-on])").forEach(el => { const top = el.offsetTop; if (top + el.offsetHeight < a || top > z) return; const id = Scene.WORLD[+el.dataset.w]; el.dataset.on = "1"; el.style.setProperty("--sky", Scene.skyTop(id, true)); el.style.backgroundImage = `url(${Scene.thumb(id, 2, true)})`; });
+}
 function viewLevels() {
-  const total = Levels.count, m = S.meta, next = Core.nextLevel(m, total), W = Levels.WORLDS, Hh = nodeUp(total) + 76, nodeY = i => Hh - nodeUp(i);
+  const count = Levels.count, m = S.meta, next = Core.nextLevel(m, count), W = Levels.WORLDS, nw = mapWorlds(m), total = Math.min(count, nw * Levels.PER), more = W.length - nw, plate = more > 0 ? 96 : 0, Hh = nodeUp(total) + 76 + plate, nodeY = i => Hh - nodeUp(i);
   let bands = "", nodes = "", d = "";
-  W.forEach((w, i) => {
-    const top = i === W.length - 1 ? 0 : nodeY((i + 1) * Levels.PER + 1) + 86, bot = i === 0 ? Hh : nodeY(i * Levels.PER + 1) + 86;
-    bands += `<div class="wband" style="top:${top}px;height:${bot - top}px;--wa:${w.a};--wb:${w.b};--sky:${Scene.skyTop(Scene.WORLD[i], true)};background-image:url(${Scene.thumb(Scene.WORLD[i], 2, true)})"><b>World ${i + 1}: ${w.n}</b></div>`;
-  });
+  for (let i = 0; i < nw; i++) {
+    const w = W[i], top = i === nw - 1 ? plate : nodeY((i + 1) * Levels.PER + 1) + 86, bot = i === 0 ? Hh : nodeY(i * Levels.PER + 1) + 86;
+    bands += `<div class="wband" data-w="${i}" style="top:${top}px;height:${bot - top}px;--wa:${w.a};--wb:${w.b}"><b>World ${i + 1}: ${w.n}</b></div>`;
+  }
   for (let i = 1; i <= total; i++) {
     const x = nodeX(i).toFixed(1), y = nodeY(i), st = Core.starsOf(m, i), open = i <= next || st > 0, boss = Levels.boss(i);
     d += (i === 1 ? "M" : "L") + x + " " + y;
     nodes += `<button class="node${boss ? " boss" : ""}${st ? " done" : ""}${open ? "" : " locked"}${i === next && !st ? " cur" : ""}" style="left:${x}%;top:${y}px;--wt:${W[Levels.world(i)].t}" data-act="level" data-id="${i}" type="button" aria-label="Level ${i}${boss ? ", boss" : ""}${st ? ", " + st + " of 3 stars" : open ? "" : ", locked"}">${Skin.shield(boss)}<span>${open ? i : ""}</span>${st ? `<em class="st" style="--p:${[0, 33.4, 66.7, 100][st]}%">★★★</em>` : ""}</button>`;
   }
-  sheetIn.innerHTML = `<div class="sheet-body mapwrap" id="sheetBody"><div class="map" id="map" style="height:${Hh}px">${bands}<svg class="mpath" viewBox="0 0 100 ${Hh}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg>${nodes}</div></div>` +
+  const ahead = more > 0 ? `<div class="wmore" id="wmore" style="height:${plate}px"><b>${more} more ${more === 1 ? "world" : "worlds"} ahead</b><small>${count} levels in all. Each world shows up here as you get near it.</small></div>` : "";
+  sheetIn.innerHTML = `<div class="sheet-body mapwrap" id="sheetBody"><div class="map" id="map" style="height:${Hh}px">${ahead}${bands}<svg class="mpath" viewBox="0 0 100 ${Hh}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg>${nodes}</div></div>` +
     `<div class="playbar"><button class="btn endl" data-act="endless" type="button"><span>Endless</span><small>Best ${fmt(m.best)}</small></button><button class="play" id="btnPlay" data-act="play" type="button"><span>PLAY</span><small id="playSub">${playLabel()}</small></button></div>`;
   const body = $("sheetBody"); body.scrollTop = Math.max(0, nodeY(Math.min(next, total)) - body.clientHeight * .58);
+  let busy = false; body.addEventListener("scroll", () => { if (busy) return; busy = true; requestAnimationFrame(() => { busy = false; mapBands(); }); }, { passive: true });
+  mapBands();
 }
 function tapLevel(id) {
   if (!campReady()) return toast("Levels open in the next update, later today. Endless is ready now.");
@@ -4603,7 +4698,7 @@ function viewStats() {
   const row = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`, day = today();
   const when = d => (d === day ? "today" : d === day - 1 ? "yesterday" : day - d + " days ago");
   sheetIn.innerHTML = head("Stats") + `<div class="sheet-body" id="sheetBody"><dl class="facts" id="stFacts">` +
-    row("Total score", fmt(s.score)) + row("Best Endless score", fmt(m.best)) + row("Levels cleared", Core.cleared(m) + " of " + Levels.count) + row("Stars", Core.starSum(m) + " of " + Levels.count * 3) +
+    row("Total score", fmt(s.score)) + row("Best Endless score", fmt(m.best)) + row("Levels cleared", Core.cleared(m) + " of " + Levels.count) + row("Stars", fmt(Core.starSum(m)) + " of " + fmt(Levels.count * 3)) +
     row("Lines cleared", fmt(s.lines)) + row("Best combo", s.combo ? s.combo + (s.combo === 1 ? " line" : " lines") + " in one move" : "none yet") +
     row("Boost tiles set off", fmt(s.boosts)) + row("Robots collected", own + " of " + Core.ALL.length + (copies ? " (" + copies + (copies === 1 ? " card)" : " cards)") : "")) + row("Packs opened", fmt(s.opened)) + row("Time played", fmtTime(s.time)) + `</dl>` +
     `<section><h3>Your best Endless runs<span>saved on this ${Cloud.state === "on" ? "account" : "device"}</span></h3>${m.top.length ? `<ol class="tops">${m.top.map(t => `<li><b>${fmt(t[0])}</b><span>${when(t[1])}</span></li>`).join("")}</ol>` : stateCard("empty", "No runs yet", "Finish an Endless run to put a score here.", ["endless", "Play Endless", 1])}</section>` +
@@ -4762,6 +4857,7 @@ function startLevel(id, sp) {
   LV.tips = cfg.tips.filter(k => TIPS[k] && !S.meta.seen.includes(k)).slice(0, 3).map(k => ({ k, h: TIPS[k][0], t: TIPS[k][1] }));
   if (!sp && id <= 5) { LV.tips.forEach(t => S.meta.seen.push(t.k)); LV.tips = []; }   // the five teaching levels teach with a hand and one line instead of a card
   if (cfg.boss) LV.tips.unshift({ k: "", h: "Boss: " + cfg.boss, t: cfg.rule, boss: true });
+  else if (cfg.twist) LV.tips.unshift({ k: "", h: "Special rule: " + cfg.twist, t: cfg.rule, boss: true });   // after level 150 the old boss rules turn up on ordinary levels: the level says so before it starts
   nextTip();
 }
 function nextTip() {
@@ -4815,7 +4911,7 @@ function showGoals() {
   const goals = lv.goals.map(q => `<li class="${q.have >= q.n ? "done" : ""}"><span class="gq-ico">${goalIcon(q)}</span><div><b>${GOALNAME[q.t]}<small>${q.have >= q.n ? "Done" : goalText(q)}</small></b><p>${esc(goalSentence(q))}</p></div></li>`).join("");
   const lim = cfg.moves ? `You have ${plural(Math.max(0, lv.left), "move")} left. Each block you place is one move.` : cfg.time ? "This level is on a timer: finish before the bar at the top runs out." : "No move limit on this level.";
   const tw = (cfg.tips || []).filter(k => k.slice(0, 2) === "t:" && TIPS[k]).map(k => `<li class="tw"><div><b>${esc(TIPS[k][0])}</b><p>${esc(TIPS[k][1])}</p></div></li>`).join("");
-  showPop(`<div class="panel goalinfo"><h2>${esc(name)}</h2>${cfg.boss ? `<p class="gq-boss"><b>Boss: ${esc(cfg.boss)}.</b> ${esc(cfg.rule || "")}</p>` : ""}<p class="gq-lead">${lv.goals.length > 1 ? "Finish every goal to win:" : "To win:"}</p><ul class="gqs">${goals}</ul><p class="gq-lim">${lim} ${cfg.moves ? "The more moves you have left when you win, the more stars you get." : cfg.time ? "The more time you have left when you win, the more stars you get." : "A higher score earns more stars."}</p>${tw ? `<p class="gq-lead">On this level:</p><ul class="gqs">${tw}</ul>` : ""}<div class="row"><button class="btn pri" data-act="pop-close" type="button">Back to the level</button></div></div>`);
+  showPop(`<div class="panel goalinfo"><h2>${esc(name)}</h2>${cfg.boss ? `<p class="gq-boss"><b>Boss: ${esc(cfg.boss)}.</b> ${esc(cfg.rule || "")}</p>` : cfg.twist ? `<p class="gq-boss"><b>Special rule: ${esc(cfg.twist)}.</b> ${esc(cfg.rule || "")}</p>` : ""}<p class="gq-lead">${lv.goals.length > 1 ? "Finish every goal to win:" : "To win:"}</p><ul class="gqs">${goals}</ul><p class="gq-lim">${lim} ${cfg.moves ? "The more moves you have left when you win, the more stars you get." : cfg.time ? "The more time you have left when you win, the more stars you get." : "A higher score earns more stars."}</p>${tw ? `<p class="gq-lead">On this level:</p><ul class="gqs">${tw}</ul>` : ""}<div class="row"><button class="btn pri" data-act="pop-close" type="button">Back to the level</button></div></div>`);
   Sfx.ui();
 }
 function renderLevel() {
@@ -5225,7 +5321,7 @@ function chatter(kind) {
 // ---- look and feel that follows the game: danger glow, music, world colours ----
 // 0 = silence, 1 = the level's song, 2 = the same song faster (last 10 seconds of a timed level), 3 = the calm menu song
 function musicMode() { const r = S.run, m = S.meta; if (!m || !m.music || !m.sound || !(m.volM > 0) || document.hidden) return 0; if (screen !== "play" || !r) return 3; return !r.over && r.lv && LV.cfg && LV.cfg.time && r.lv.ms <= 10000 ? 2 : 1; }
-const musicTrack = () => screen !== "play" ? "menu" : mode === "level" && LV.cfg ? "w" + LV.cfg.world : "endless";
+const musicTrack = () => screen !== "play" ? "menu" : mode === "level" && LV.cfg ? "w" + LV.cfg.world % 10 : "endless";   // ten world songs: worlds 11 to 40 go round them again
 const musicBoss = () => screen === "play" && mode === "level" && !!(LV.cfg && LV.cfg.boss) && !!S.run && !S.run.over;
 function feel() {
   const r = S.run, play = screen === "play" && r; let fil = 0; if (play) for (let i = 0; i < 64; i++) if (r.grid[i]) fil++;
@@ -5396,12 +5492,12 @@ function showCrewTip(i) {
   document.body.appendChild(el); const w = el.offsetWidth; el.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, q.left + q.width / 2 - w / 2)) + "px"; el.style.bottom = (window.innerHeight - q.top + 10) + "px"; RB.ctip = el;
 }
 // ---- "What's new": a short note on the menu, with a dot until it has been read ----
-const NEWS = { key: "new13", title: "What's new", items: [
-  ["Robot charges are yours to keep", "Powers no longer refill each level. Every robot has its own charges (the x3 badge). Earn more from packs, repeat cards, milestones, daily rewards and the Store."],
-  ["A bigger robot bar", "Bigger buttons that glow when a robot would really help. Hold one to read what it does."],
-  ["Easier placing", "Let go a little off and the block slides into the nearest free spot. Change it in Settings, Placement help."],
-  ["Fairer goals and streaks", "Every line counts, rows and columns alike, and each goal card states its exact rule. A block that clears nothing now ends your streak (unless Halo is in your crew)."],
-  ["New music, softer sounds", "A cheerful tune for every world, quieter by default, and soft button sounds."]] };
+const NEWS = { key: "new14", title: "What's new", items: [
+  ["450 new levels", "The campaign now runs to level 600: 30 new worlds beyond the Star Forge, each with its own look. Levels 1 to 150 and your stars are exactly as they were."],
+  ["45 new bosses", "Every new boss mixes two special rules at once, like Frozen Mirror and Falling Giants."],
+  ["Old boss rules come back", "From World 16 on, Gravity, Mirror, Giants and the rest turn up on ordinary levels. A card names the rule before you start."],
+  ["New shapes", "Arrow, crown, bolt, ladder and more, in gems, stone and ice."],
+  ["Open all packs", "With two or more packs waiting, one tap on the Packs tab opens them all."]] };
 const newsUnread = () => !S.meta.seen.includes(NEWS.key);
 function showNews() {
   showPop(`<div class="panel news"><h2>${NEWS.title}</h2><p class="note">Version ${esc(GAME.version)}</p><ul class="newslist">${NEWS.items.map(([h1, t]) => `<li><b>${esc(h1)}</b><span>${esc(t)}</span></li>`).join("")}</ul><div class="row"><button class="btn pri" data-act="pop-close" type="button">Got it</button></div></div>`);
@@ -5528,12 +5624,47 @@ const Scene = (() => {
     cave: { n: "Crystal Caves", fx: "twinkle", p: (a, b, d) => { a("sky", ["#0B0A1E", "#1E1A44", "#3A2C6A"]); a("spikes", 0, 9, .1, .26, "#1A1638", -1); a("spikes", .68, 7, .1, .24, "#3C3478", 1, "#8FE8F0"); b("hills", .78, .03, "#161230", 1.4); b("spikes", .8, 6, .08, .2, "#241E52", 1, "#C795FF"); d("spikes", 0, 7, .05, .13, "#0A0818", -1); d("hills", .9, .025, "#0A0818", 1.2); d("spikes", .92, 5, .04, .1, "#0A0818", 1, "#6FE0E8"); } },
     storm: { n: "Storm Spire", fx: "rain", p: (a, b, d) => { a("sky", ["#0A0E1C", "#252C48", "#5A6485"]); a("clouds", .08, .3, 6, "#39415F", .8); a("spikes", .68, 6, .12, .24, "#2B3352", 1); b("hills", .78, .02, "#181E36"); b("towers", .78, 2, .1, .12, .3, .4, "#181E36", "#BFD8FF", "aa"); b("clouds", .3, .42, 3, "#4A5378", .5); d("spikes", .92, 8, .03, .08, "#0A0E1C", 1); d("hills", .9, .015, "#0A0E1C"); } },
     forge: { n: "Star Forge", fx: "spark", p: (a, b, d, c) => { a("sky", ["#04040C", "#150B22", "#3A1220"]); a("stars", 120, .8); a("orb", .2, .22, 26, "#5A2A3A", "#FF7A4A"); a("ring", .64, .4, Math.min(c.W * .2, 90), "#FFB45C", "#FF6A3A"); b("mesas", .78, .03, "#1E0C18", 4); b("towers", .78, 4, .06, .1, .08, .2, "#1E0C18", "#FF9A4A", "sfa"); d("mesas", .9, .02, "#0A040A", 3); d("pipes", .87, "#0A040A"); } },
+    // ---- worlds 11 to 40: the trip beyond the Star Forge ----
+    ember: { n: "Ember Vale", fx: "spark", p: (a, b, d) => { a("sky", ["#14080E", "#5A1A1A", "#E0672A"]); a("orb", .7, .52, 22, "#FFD08A", "#FF7A3A"); a("spikes", .62, 4, .12, .22, "#5A2018", 1, "#FF8A3A"); a("mesas", .62, .03, "#4A1A14", 5); b("mesas", .74, .03, "#30100E", 4); b("pipes", .7, "#1E0A0A"); d("hills", .88, .02, "#160608", 1.2); d("spikes", .92, 6, .03, .07, "#160608", 1, "#FF6A2A"); } },
+    dunes: { n: "Glass Dunes", fx: "dust", p: (a, b, d) => { a("sky", ["#3A4A7A", "#E8A27A", "#FBE3B0"]); a("orb", .3, .3, 24, "#FFF4D0", "#FFD890"); a("hills", .56, .05, "#D9A86A", .6); a("hills", .63, .04, "#C08A50", .9); b("hills", .74, .035, "#9A6A3A", .7); b("spikes", .76, 5, .04, .1, "#BFE8F0", 1, "#FFFFFF"); d("hills", .88, .025, "#5E3A1A", .6); d("spikes", .9, 7, .02, .06, "#8AD0E0", 1, "#FFFFFF"); } },
+    moss: { n: "Mossy Vault", fx: "firefly", p: (a, b, d) => { a("sky", ["#0C2620", "#2E6A4A", "#BFE0A0"]); a("rays", "#E8FFC0"); a("towers", .64, 6, .07, .1, .14, .3, "#3A6A4A", "", "ffd"); a("hills", .64, .02, "#34604A"); b("towers", .77, 4, .1, .14, .1, .22, "#1E4030", "#D8F08A", "fd"); b("strands", .78, 12, .05, .12, "#1E4030"); d("hills", .89, .02, "#0C2018", .8); d("strands", .9, 18, .06, .16, "#0C2018", "reed"); } },
+    harbor: { n: "Lantern Harbor", fx: "firefly", p: (a, b, d) => { a("sky", ["#0A1230", "#24386A", "#E08A5A"]); a("stars", 40, .4); a("orb", .78, .2, 13, "#F4EEDC", "#C8D4F0"); a("hills", .6, .03, "#2A3C6A"); a("towers", .62, 5, .05, .08, .08, .2, "#22305A", "#FFD27A", "apd"); b("towers", .76, 3, .08, .11, .16, .3, "#141E3E", "#FFC85A", "ad"); b("pipes", .74, "#141E3E"); d("hills", .9, .01, "#070C1E", .5); d("fence", .9, "#070C1E"); d("crates", .905, "#070C1E", "#C99A3C"); } },
+    hive: { n: "Brass Hive", fx: "dust", p: (a, b, d, c) => { a("sky", ["#2A1A0A", "#8A5A1A", "#F2C860"]); a("grid", "rgba(255,220,140,.1)", 26); a("towers", .64, 6, .1, .14, .08, .2, "#8A5A20", "#FFE08A", "ddd"); b("dome", .28, .78, Math.min(c.W * .15, 64), "#5A3A12", "#FFD86A"); b("dome", .72, .76, Math.min(c.W * .11, 48), "#5A3A12", "#FFD86A"); b("pipes", .74, "#5A3A12"); d("piles", .9, 2, "#2E1C08", "#C99A3C"); d("hills", .9, .012, "#2E1C08", .6); } },
+    mesa: { n: "Thunder Mesa", fx: "rain", p: (a, b, d) => { a("sky", ["#140A28", "#4A2A6A", "#D07A5A"]); a("clouds", .06, .28, 6, "#3A2452", .85); a("mesas", .56, .07, "#6A3A6A", 4); a("mesas", .64, .05, "#4E2A56", 5); b("mesas", .75, .045, "#32183E", 4); b("clouds", .34, .44, 3, "#5A3A78", .45); d("mesas", .89, .03, "#180A22", 3); d("strands", .9, 8, .03, .07, "#180A22"); } },
+    coral: { n: "Coral Garden", fx: "bubble", p: (a, b, d, c) => { a("sky", ["#1A8AA0", "#146A96", "#0E4478", "#082450"]); a("rays", "#D0FFF4"); a("hills", .64, .05, "#12587A", 1.5); a("strands", .66, 9, .08, .2, "#E06A8C", "kelp"); b("hills", .77, .03, "#0C3E60"); b("strands", .78, 8, .1, .22, "#FF9A6A", "kelp"); b("dome", .5, .79, Math.min(c.W * .1, 44), "#0C3E60", "#FFE0A0"); d("hills", .9, .02, "#061E3A", .8); d("strands", .9, 10, .08, .2, "#B84A7A", "kelp"); } },
+    ridge: { n: "Aurora Ridge", fx: "snow", p: (a, b, d) => { a("sky", ["#041018", "#0C2A3A", "#1E5A5A"]); a("stars", 90, .6); a("aurora", ["#46E0A8", "#7AF0D0", "#5AB0F0"]); a("spikes", .66, 5, .16, .3, "#2A5A6A", 1, "#CFF6F0"); b("spikes", .78, 4, .1, .2, "#163A4A", 1, "#9AE0D8"); b("hills", .78, .02, "#D8F0F0", .7); d("hills", .9, .02, "#EEF8F8", .5); d("spikes", .92, 6, .03, .07, "#0E2A36", 1); } },
+    halls: { n: "Echo Halls", fx: "dust", p: (a, b, d) => { a("sky", ["#1E1410", "#4A3020", "#B8845A"]); a("grid", "rgba(255,220,180,.07)", 34); a("towers", .66, 8, .05, .07, .26, .4, "#5E4430", "#F0C88A", "dd"); b("towers", .8, 5, .08, .1, .3, .44, "#3A2618", "#FFD89A", "dp"); d("towers", .92, 4, .1, .13, .06, .1, "#1C100A", "", "f"); d("fence", .9, "#1C100A"); } },
+    orchard: { n: "Rust Orchard", fx: "dust", p: (a, b, d) => { a("sky", ["#2A2A4A", "#B0705A", "#F6D09A"]); a("orb", .24, .4, 18, "#FFF0C8", "#FFC88A"); a("hills", .58, .04, "#9A5A40"); a("strands", .6, 10, .08, .16, "#7A3E2A"); b("hills", .72, .03, "#6A3220", .8); b("strands", .73, 7, .12, .22, "#52241A"); b("piles", .74, 2, "#52241A", "#E0A05A"); d("hills", .88, .015, "#2A120C", .6); d("fence", .885, "#2A120C"); d("grass", .885, "#2A120C"); } },
+    lagoon: { n: "Opal Lagoon", fx: "twinkle", p: (a, b, d) => { a("sky", ["#5A7AC8", "#A8C8F0", "#F8E0E8"]); a("orb", .7, .26, 20, "#FFFFFF", "#FFE0F0"); a("clouds", .16, .4, 5, "#FFF0F8", .6); a("hills", .6, .03, "#7AB0C8", .7); b("hills", .72, .04, "#4A8AA0", 1.6); b("strands", .73, 10, .05, .12, "#3A7088"); d("hills", .88, .012, "#1E4A5A", .5); d("strands", .89, 20, .05, .14, "#1E4A5A", "reed"); } },
+    windmill: { n: "Windmill Heights", fx: "dust", p: (a, b, d) => { a("sky", ["#3A78C0", "#9AD0F0", "#F0F4D0"]); a("orb", .2, .18, 16, "#FFFBE0", "#FFF0B0"); a("clouds", .14, .4, 5, "#FFFFFF", .7); a("hills", .58, .05, "#8FC06A"); b("hills", .7, .045, "#5E9A4A", 1.3); b("towers", .7, 3, .06, .08, .14, .22, "#3A5A3A", "#FFF0B0", "cc"); d("hills", .87, .02, "#2A4A1E", .8); d("fence", .875, "#1E3A16"); d("grass", .875, "#1E3A16"); } },
+    bazaar: { n: "Twilight Bazaar", fx: "firefly", p: (a, b, d) => { a("sky", ["#1E1238", "#7A3A7A", "#F09A6A"]); a("stars", 30, .35); a("towers", .64, 7, .07, .11, .06, .16, "#6A3466", "#FFD27A", "dpf"); b("towers", .77, 5, .1, .14, .08, .18, "#42204A", "#FFB85A", "dfp"); b("pipes", .73, "#42204A"); d("hills", .9, .008, "#1E0E26", .5); d("crates", .9, "#1E0E26", "#E08AC0"); d("fence", .9, "#1E0E26"); } },
+    quarry: { n: "Quartz Quarry", fx: "dust", p: (a, b, d) => { a("sky", ["#3A3A5A", "#8A88A8", "#E8E0F0"]); a("mesas", .54, .06, "#B8B0CC", 5); a("mesas", .62, .05, "#9A92B4", 4); b("mesas", .74, .04, "#6A6288", 4); b("spikes", .75, 5, .05, .12, "#E6DCFF", 1, "#FFFFFF"); b("pipes", .71, "#4A4466"); d("mesas", .89, .025, "#2E2A44", 3); d("crates", .9, "#2E2A44", "#C8C0E0"); } },
+    meteor: { n: "Meteor Fields", fx: "twinkle", p: (a, b, d, c) => { a("sky", ["#04060F", "#101A38", "#2E3A6A"]); a("stars", 130, .75); a("orb", .76, .2, 16, "#C8B8A0", "#8A9AD0"); a("ring", .76, .2, Math.min(c.W * .09, 40), "#D8C8A8", "#A8B8E8"); a("hills", .64, .03, "#3A4670", 1.4); b("hills", .76, .035, "#262E52", 1.8); b("spikes", .77, 3, .04, .09, "#262E52", 1, "#A8C0FF"); d("hills", .9, .03, "#0C1022", 1.5); } },
+    nebula: { n: "Nebula Garden", fx: "firefly", p: (a, b, d, c) => { a("sky", ["#0A0420", "#3A1460", "#8A3A9A"]); a("stars", 100, .7); a("aurora", ["#E06AD8", "#8A6AF0", "#5AD0F0"]); a("hills", .64, .03, "#4A2070"); b("hills", .76, .025, "#2E1250", 1.3); b("dome", .68, .77, Math.min(c.W * .12, 52), "#2E1250", "#F0B0FF"); b("strands", .77, 9, .06, .14, "#B86AE0"); d("hills", .9, .015, "#12062A", .7); d("strands", .9, 16, .06, .15, "#D890FF", "reed"); } },
+    glacier: { n: "Iron Glacier", fx: "snow", p: (a, b, d) => { a("sky", ["#1A2A4A", "#5A88B0", "#DCEEF8"]); a("spikes", .62, 4, .18, .32, "#8AB4CC", 1, "#F0FAFF"); a("mesas", .62, .03, "#7AA6C0", 5); b("mesas", .74, .035, "#4A7A98", 4); b("pipes", .7, "#2A4A62"); b("towers", .74, 2, .07, .09, .12, .2, "#2A4A62", "#BFE8FF", "sa"); d("hills", .88, .02, "#E4F2F8", .5); d("spikes", 0, 10, .03, .08, "#C8E4F0", -1, "#FFFFFF"); } },
+    docks: { n: "Sunsail Docks", fx: "dust", p: (a, b, d) => { a("sky", ["#3A2A5A", "#E07A5A", "#FFD89A"]); a("orb", .5, .5, 30, "#FFF2C0", "#FFB060"); a("clouds", .18, .42, 5, "#FFC8A0", .55); b("plats", 3, .36, .62, "#5A2A2A", "#FFE08A"); b("clouds", .62, .74, 4, "#F0A88A", .6); d("clouds", .84, .96, 5, "#FFD8B8", .85); } },
+    well: { n: "Gravity Well", fx: "twinkle", p: (a, b, d, c) => { a("sky", ["#020208", "#0A0E2A", "#1E1A4A"]); a("stars", 140, .9); a("orb", .5, .34, 20, "#05050C", "#6A7AFF"); a("ring", .5, .34, Math.min(c.W * .24, 104), "#9AA8FF", "#5A6AD8"); a("spikes", 0, 7, .06, .16, "#12143A", -1); b("mesas", .78, .04, "#14163E", 4); b("spikes", .79, 4, .06, .14, "#14163E", 1, "#8FA0FF"); d("mesas", .9, .03, "#06071A", 3); } },
+    geyser: { n: "Geyser Flats", fx: "bubble", p: (a, b, d) => { a("sky", ["#1E3A4A", "#5A9A9A", "#E8F0C8"]); a("orb", .26, .3, 16, "#FFFDE8", "#F0F0B0"); a("clouds", .3, .52, 5, "#F4FFF8", .5); a("hills", .62, .015, "#5A9A8A", .5); a("spikes", .62, 5, .03, .07, "#4A8A7A", 1); b("hills", .75, .015, "#34705E", .6); b("clouds", .56, .72, 4, "#E8FFF4", .6); b("pipes", .72, "#22503E"); d("hills", .89, .012, "#123226", .5); d("spikes", .9, 6, .02, .05, "#123226", 1, "#A8F0D8"); } },
+    circuit: { n: "Circuit Grove", fx: "twinkle", p: (a, b, d) => { a("sky", ["#04140E", "#0A3A2A", "#1E6A4A"]); a("grid", "rgba(120,255,170,.1)", 20); a("grid", "rgba(120,255,170,.16)", 100); a("towers", .66, 8, .025, .04, .14, .3, "#14503A", "#7AFFA8", "aa"); b("towers", .78, 5, .04, .06, .18, .34, "#0C3626", "#B8FFD0", "as"); b("pipes", .74, "#0C3626"); d("hills", .9, .01, "#041A10", .5); d("strands", .9, 16, .04, .1, "#2EB868", "reed"); } },
+    mines: { n: "Amber Mines", fx: "spark", p: (a, b, d) => { a("sky", ["#140C04", "#3A2410", "#6A4418"]); a("spikes", 0, 8, .1, .24, "#241606", -1); a("mesas", .64, .04, "#5A3A14", 5); a("spikes", .64, 5, .05, .12, "#8A5A1A", 1, "#FFC85A"); b("mesas", .76, .035, "#3A240C", 4); b("pipes", .72, "#241606"); b("towers", .76, 2, .06, .08, .1, .16, "#241606", "#FFD27A", "f"); d("spikes", 0, 6, .05, .12, "#0E0802", -1); d("mesas", .9, .02, "#0E0802", 3); d("crates", .9, "#0E0802", "#D0902E"); } },
+    peaks: { n: "Cobalt Peaks", fx: "snow", p: (a, b, d) => { a("sky", ["#101A48", "#3A5AB0", "#C8D8F8"]); a("orb", .8, .16, 14, "#FFFFFF", "#D8E4FF"); a("spikes", .64, 4, .22, .36, "#5A7AD0", 1, "#E8F0FF"); a("clouds", .4, .54, 4, "#E8F0FF", .5); b("spikes", .77, 5, .14, .24, "#2E4AA0", 1, "#B8CCFF"); b("hills", .77, .015, "#24408A"); d("hills", .89, .02, "#0E1A48", .9); d("spikes", .91, 7, .03, .08, "#0E1A48", 1); } },
+    oasis: { n: "Mirage Oasis", fx: "dust", p: (a, b, d, c) => { a("sky", ["#2A5AA0", "#F0B88A", "#FBE8B8"]); a("orb", .68, .34, 26, "#FFF8E0", "#FFE0A0"); a("hills", .58, .04, "#E0B070", .6); a("hills", .64, .03, "#C8965A", .9); b("hills", .75, .02, "#2E8A7E", .5); b("dome", .3, .76, Math.min(c.W * .1, 44), "#1A5A52", "#FFE8A0"); b("strands", .76, 6, .12, .22, "#1A5A52", "kelp"); d("hills", .89, .012, "#0E3A36", .5); d("strands", .9, 7, .1, .2, "#0E3A36", "kelp"); d("grass", .89, "#0E3A36"); } },
+    tempest: { n: "Tempest Reach", fx: "rain", p: (a, b, d) => { a("sky", ["#06101C", "#1E3248", "#4A6A8A"]); a("clouds", .04, .3, 7, "#2A3C54", .9); a("hills", .62, .04, "#2E4A66", 2.4); b("hills", .74, .045, "#1C3048", 3); b("towers", .74, 1, .07, .08, .24, .3, "#101E30", "#FFE8A0", "a"); b("clouds", .32, .46, 3, "#3E5674", .5); d("hills", .88, .04, "#081420", 3.4); } },
+    prism: { n: "Prism Terrace", fx: "twinkle", p: (a, b, d) => { a("sky", ["#1A1440", "#6A4AB0", "#F0B8E0"]); a("stars", 50, .4); a("aurora", ["#FF9AD0", "#FFE08A", "#8AE8F0"]); a("mesas", .6, .05, "#8A5AC0", 5); b("mesas", .73, .04, "#5E3A98", 4); b("spikes", .74, 6, .06, .14, "#C8A0F0", 1, "#FFFFFF"); d("mesas", .89, .025, "#2A1450", 3); d("spikes", .9, 5, .03, .08, "#FF9AD0", 1, "#FFFFFF"); } },
+    gate: { n: "Obsidian Gate", fx: "spark", p: (a, b, d) => { a("sky", ["#08040A", "#2A0C18", "#6A1A2A"]); a("orb", .5, .42, 24, "#FFB0A0", "#FF4A4A"); a("mesas", .64, .04, "#3A1220", 5); b("towers", .8, 2, .13, .15, .4, .46, "#14060C", "#FF6A7A", "pp"); b("mesas", .78, .03, "#200A12", 4); d("spikes", .92, 9, .03, .09, "#0A0306", 1, "#FF4A5A"); d("hills", .9, .012, "#0A0306", .6); } },
+    comet: { n: "Comet Trail", fx: "snow", p: (a, b, d) => { a("sky", ["#030814", "#0C2448", "#2A6A9A"]); a("stars", 120, .8); a("rays", "#BFF0FF"); a("orb", .24, .2, 18, "#F4FDFF", "#8AE0FF"); a("hills", .64, .04, "#2A6A90", 1.2); b("hills", .76, .03, "#1A4A6A", 1.6); b("spikes", .77, 5, .06, .14, "#8AD8F0", 1, "#FFFFFF"); d("hills", .9, .02, "#0A2440", .8); d("spikes", .91, 6, .02, .06, "#C8F0FF", 1, "#FFFFFF"); } },
+    moonbase: { n: "Silent Moon", fx: "dust", p: (a, b, d, c) => { a("sky", ["#020206", "#0A0A18", "#1E1E30"]); a("stars", 150, .85); a("orb", .74, .22, 22, "#4A8AD8", "#8AC0FF"); a("hills", .64, .02, "#7A7A8E", 1.8); b("hills", .76, .02, "#5A5A6E", 1.2); b("dome", .28, .77, Math.min(c.W * .12, 52), "#3A3A4E", "#BFE8FF"); b("dome", .66, .78, Math.min(c.W * .08, 36), "#3A3A4E", "#BFE8FF"); b("pipes", .74, "#3A3A4E"); d("hills", .9, .02, "#1A1A28", 1.4); d("crates", .9, "#1A1A28", "#9A9AAE"); } },
+    homestar: { n: "Home Star", fx: "spark", p: (a, b, d, c) => { a("sky", ["#1A0E04", "#7A3A0A", "#FFC85A"]); a("stars", 60, .4); a("orb", .5, .36, 34, "#FFFBE0", "#FFD060"); a("ring", .5, .36, Math.min(c.W * .26, 112), "#FFE27A", "#FFB03A"); a("hills", .64, .03, "#8A4A12", .8); b("hills", .76, .015, "#5A2E08", .7); b("shed", .08, .775, .44, "#3E2006", "#FFF0B0", "#E8A82A"); b("dome", .82, .76, Math.min(c.W * .11, 48), "#3E2006", "#FFF0B0"); d("hills", .9, .012, "#1E1002", .6); d("fence", .9, "#1E1002"); d("grass", .9, "#1E1002"); } },
     gold: { n: "Golden Hour", p: workshop({ sky: ["#5A3A2A", "#C98A4A", "#FBE3A0"], f: "#8A6238", m: "#5A3E22", n: "#2E1E10", lit: "#FFF2C0", st: 0, orb: [.6, .42, 26, "#FFF6D0", "#FFD070"] }), fx: "dust" },
     blue: { n: "Blueprint Room", p: (a, b, d, c) => { a("sky", ["#143A6A", "#1B4C86", "#1F5594"]); a("grid", "rgba(255,255,255,.1)", 22); a("grid", "rgba(255,255,255,.16)", 110); const ln = (l, x, y, R, t) => { c.g = c.G[l]; c.g.save(); c.g.globalAlpha = .5; P.gear(c, x * c.W, y * c.H, R, "#DCEBFA", t); c.g.restore(); }; ln(0, .22, .3, c.W * .16, 12); ln(0, .8, .2, c.W * .1, 9); ln(1, .7, .62, c.W * .2, 14); ln(1, .2, .74, c.W * .09, 8); d("hills", .93, .008, "#0E2C52", .4); }, fx: "twinkle" },
     moon: { n: "Moonlit Garden", p: workshop({ sky: ["#070E1F", "#16284A", "#3A5C7A"], f: "#1D3552", m: "#12233A", n: "#081422", lit: "#FFE9A8", st: 90, orb: [.68, .2, 30, "#F4F2E2", "#BFD4F0"] }, (a, b, d) => { d("strands", .9, 16, .05, .16, "#081422", "reed"); }), fx: "firefly" },
     aura: { n: "Aurora Deck", p: workshop({ sky: ["#04081A", "#0C1C38", "#1C3A4E"], f: "#142A40", m: "#0C1A2C", n: "#060E1A", lit: "#9FF0D8", st: 130, orb: [.84, .12, 9, "#F3F1E0", "#BFD0F0"] }, a => { a("aurora", ["#46E0A8", "#5AB0F0", "#B07AF0"]); }), fx: "twinkle" }
   };
-  const WORLD = ["scrap", "canyon", "frost", "tide", "cloud", "clock", "marsh", "cave", "storm", "forge"], SETS = ["gold", "blue", "moon", "aura"], ORDER = ["workshop", ...WORLD, ...SETS];
+  const WORLD = ["scrap", "canyon", "frost", "tide", "cloud", "clock", "marsh", "cave", "storm", "forge",
+    "ember", "dunes", "moss", "harbor", "hive", "mesa", "coral", "ridge", "halls", "orchard", "lagoon", "windmill", "bazaar", "quarry", "meteor",
+    "nebula", "glacier", "docks", "well", "geyser", "circuit", "mines", "peaks", "oasis", "tempest", "prism", "gate", "comet", "moonbase", "homestar"], SETS = ["gold", "blue", "moon", "aura"];
+  // the order themes are numbered in for the saved choice: the first fifteen never move, so the looks of worlds 11 to 40 go on the end
+  const FIRST = 10, ORDER = ["workshop", ...WORLD.slice(0, FIRST), ...SETS, ...WORLD.slice(FIRST)];
 
   // paint one theme at one size: returns the three canvases and the list of moving extras
   function paint(id, W, H, tod, scale) {
@@ -5621,7 +5752,7 @@ const Bots = (() => {
     ladder: { say: "Nice view from up here." },
     pipe: { say: "Peekaboo!" },
     garden: { say: "Grow, little bolt-flower.", front: SV(`<path d="M96 80h24l-4 18h-16z" fill="#C8703A" ${K}/>`) + SV(`<path d="M108 80V58" fill="none" stroke="#3FA57A" stroke-width="4" stroke-linecap="round"/><path d="M108 66c-12-2-14-12-14-12 12-2 14 6 14 12zM108 60c10-4 15-12 15-12-11-3-15 5-15 12z" fill="#46AC80" ${K}/><circle cx="108" cy="54" r="5.5" fill="#F2CF7A" ${K}/>`, "k-sway", 108, 80) + SV(`<path d="M66 58h20v14H66z" fill="#7F93A8" ${K}/><path d="M86 62l12-6" fill="none" stroke="#0A1524" stroke-width="6" stroke-linecap="round"/><path d="M86 62l12-6" fill="none" stroke="#7F93A8" stroke-width="2.6" stroke-linecap="round"/>`, "k-can", 76, 65) },
-    scope: { say: "I can see Level 150 from here!", front: SV(`<path d="M108 98l8-34 8 34M116 64v34" fill="none" stroke="#0A1524" stroke-width="5" stroke-linecap="round"/><path d="M108 98l8-34 8 34" fill="none" stroke="#8A5F1F" stroke-width="2.2" stroke-linecap="round"/>`) + SV(`<path d="M96 70l36-30 9 11-36 30z" fill="#C99A3C" ${K}/><path d="M128 43l10-8 9 11-10 8z" fill="#E9C97A" ${K}/>`, "k-scope", 116, 64) + SV(`<path d="M146-12l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#FFF6D0"/>`, "k-twk", 146, -1) },
+    scope: { say: "I can see Level 600 from here!", front: SV(`<path d="M108 98l8-34 8 34M116 64v34" fill="none" stroke="#0A1524" stroke-width="5" stroke-linecap="round"/><path d="M108 98l8-34 8 34" fill="none" stroke="#8A5F1F" stroke-width="2.2" stroke-linecap="round"/>`) + SV(`<path d="M96 70l36-30 9 11-36 30z" fill="#C99A3C" ${K}/><path d="M128 43l10-8 9 11-10 8z" fill="#E9C97A" ${K}/>`, "k-scope", 116, 64) + SV(`<path d="M146-12l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#FFF6D0"/>`, "k-twk", 146, -1) },
     map: { say: "X marks the pack.", front: SV(`<path d="M20 66l20-5 20 5 20-5v30l-20 5-20-5-20 5z" fill="#F2E3B8" ${K}/><path d="M40 61v30M60 66v30" stroke="#B89A5A" stroke-width="1.6"/><path d="M27 76q8-6 14 2t14 0M66 74l8 8M74 74l-8 8" fill="none" stroke="#C2473F" stroke-width="2.4" stroke-linecap="round"/>`, "k-map", 50, 82) },
     cart: { say: "Wheee!", front: SV(`<path d="M2 60h96l-9 30H11z" fill="#6E4A22" ${K}/><path d="M6 68h88M9 78h82" stroke="#4A300F" stroke-width="2"/>`) + wheel(26) + wheel(74) }
   };
@@ -5708,9 +5839,10 @@ function lookSection() {
   const m = S.meta, an = m.bgAnim === 3 ? (reduced ? 1 : 0) : m.bgAnim;
   const seg = (key, opts, label, cur) => `<div class="seg" role="radiogroup" aria-label="${label}">${opts.map((t, i) => `<button class="segb" data-act="num" data-id="${key}" data-v="${i}" type="button" role="radio" aria-checked="${cur === i}">${t}</button>`).join("")}</div>`;
   const now = Scene.WORLD[Levels.world(Math.min(Levels.count, Core.nextLevel(m, Levels.count)))], shown = m.bgTheme > 0 && Scene.unlocked(Scene.ORDER[m.bgTheme - 1]) ? Scene.ORDER[m.bgTheme - 1] : now;
-  const tiles = Scene.ORDER.map((id, i) => { const open = Scene.unlocked(id); return `<button class="theme${open ? "" : " locked"}" data-act="${open ? "num" : "locked"}" data-id="bgTheme" data-v="${i + 1}" data-theme="${id}" type="button" role="radio" aria-checked="${m.bgTheme === i + 1}"${open ? "" : ' aria-disabled="true"'} aria-label="${Scene.T[id].n}${open ? "" : ", locked. " + Scene.need(id)}" style="background-image:url(${Scene.thumb(id, m.tod)})"><span>${Scene.T[id].n}</span>${open ? "" : `<small>${Scene.need(id)}</small>`}</button>`; }).join("");
+  let teasers = 0; const listed = Scene.ORDER.filter((id, i) => i < 15 || Scene.unlocked(id) || teasers++ < 2), more = Scene.ORDER.length - listed.length;
+  const tiles = Scene.ORDER.map((id, i) => { if (!listed.includes(id)) return ""; const open = Scene.unlocked(id); return `<button class="theme${open ? "" : " locked"}" data-act="${open ? "num" : "locked"}" data-id="bgTheme" data-v="${i + 1}" data-theme="${id}" type="button" role="radio" aria-checked="${m.bgTheme === i + 1}"${open ? "" : ' aria-disabled="true"'} aria-label="${Scene.T[id].n}${open ? "" : ", locked. " + Scene.need(id)}" style="background-image:url(${Scene.thumb(id, m.tod)})"><span>${Scene.T[id].n}</span>${open ? "" : `<small>${Scene.need(id)}</small>`}</button>`; }).join("");
   return `<section class="mn" id="mnLook"><h3>Look<span>${Scene.ORDER.filter(Scene.unlocked).length} of ${Scene.ORDER.length} themes unlocked</span></h3>` +
-    `<p class="note">Background theme while you play. Clear a world or finish a robot set to unlock more.</p>` +
+    `<p class="note">Background theme while you play. Clear a world or finish a robot set to unlock more.${more > 0 ? " " + more + " more looks wait in the worlds ahead." : ""}</p>` +
     `<div class="themes" role="radiogroup" aria-label="Background theme"><button class="theme auto" data-act="num" data-id="bgTheme" data-v="0" type="button" role="radio" aria-checked="${m.bgTheme === 0}"><span>Auto</span><small>Changes with the world</small></button>${tiles}</div>` +
     `<p class="note">Background animation${sysReduced ? ". Your phone asks for less motion, so the scene stays still." : ""}</p>${seg("bgAnim", ["Full", "Reduced", "Off"], "Background animation", an)}` +
     `<p class="note">Border robots</p>${seg("bots", ["On", "Reduced", "Off"], "Border robots", m.bots)}` +
@@ -5873,7 +6005,7 @@ function viewProfile() {
     `<section class="pcard">${avatarPic(m, "big")}<div class="pc-t"><div class="pc-name"><b id="pfName">${esc(m.name || "Player")}</b><button class="btn sm" data-act="name-edit" type="button">Rename</button></div><div id="pfEdit"></div>` +
     `<div class="rankrow">${rankBadge(r.i)}<span><b id="pfRank">${r.name}</b><small id="pfXp">${fmt(r.xp)} XP${r.hi ? " · " + fmt(r.hi - r.xp) + " to " + r.next : " · top rank"}</small></span></div><div class="xpbar" role="progressbar" aria-label="Progress to the next rank" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div></div></section>` +
     `<section><h3>Avatar<span>pick one of your robots</span></h3>${owned.length ? `<div class="avgrid" role="radiogroup" aria-label="Avatar">${owned.map(c => `<button class="avpick" data-act="avatar" data-id="${c.id}" type="button" role="radio" aria-checked="${avatarOf(m) === c.id}" aria-label="${esc(c.name)}">${bot(c)}</button>`).join("")}</div>` : stateCard("empty", "No robots yet", "Open a pack to meet your first robot. Then you can wear its face here.", ["tab", "Open packs", 1, "packs"])}</section>` +
-    `<section><h3>Summary</h3><dl class="facts" id="pfFacts">${row("Levels cleared", Core.cleared(m) + " of " + Levels.count)}${row("Stars", Core.starSum(m) + " of " + Levels.count * 3)}${row("Robots collected", owned.length + " of " + Core.ALL.length)}${row("Best Endless score", fmt(m.best))}${row("Achievements", done + " of " + Core.ACH.length)}${row("Time played", fmtTime(m.stats.time))}</dl>` +
+    `<section><h3>Summary</h3><dl class="facts" id="pfFacts">${row("Levels cleared", Core.cleared(m) + " of " + Levels.count)}${row("Stars", fmt(Core.starSum(m)) + " of " + fmt(Levels.count * 3))}${row("Robots collected", owned.length + " of " + Core.ALL.length)}${row("Best Endless score", fmt(m.best))}${row("Achievements", done + " of " + Core.ACH.length)}${row("Time played", fmtTime(m.stats.time))}</dl>` +
     `<div class="row"><button class="btn pri" data-act="tab" data-id="ach" type="button">Achievements</button><button class="btn" data-act="tab" data-id="stats" type="button">All stats</button></div></section></div>`;
 }
 const rankBadge = i => `<span class="rbadge r${Math.min(4, i >> 1)}" aria-hidden="true"><svg viewBox="0 0 40 46"><path class="rb-r" d="M20 1.500 37 6v16c0 11-7 18-17 22.500C10 40 3 33 3 22V6z"/><path class="rb-f" d="M20 5.500 33.500 9v13c0 9-5.500 14.500-13.500 18.500C12 36.500 6.500 31 6.500 22V9z"/></svg><b>${i + 1}</b></span>`;

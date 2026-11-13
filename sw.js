@@ -1,6 +1,6 @@
 // Pack Stack service worker: keeps the whole game on the phone so it opens and plays with no internet.
 // The cache name changes with every build, so a new version replaces the old one cleanly.
-const CACHE = "packstack-1.3.0-16688de366";
+const CACHE = "packstack-1.4.0-c799e9eb22";
 const CORE = ["./", "index.html", "manifest.webmanifest", "live.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "favicon-32.png"];
 // the music tracks live in their own cache that is NOT replaced by updates (14 MB should only ever download once). Rename it only if a track changes.
 const MUSIC = "packstack-music-1";
