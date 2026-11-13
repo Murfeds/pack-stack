@@ -1318,6 +1318,14 @@ textarea.code[readonly]{font:600 11.5px/1.4 ui-monospace,Menlo,Consolas,monospac
 @media (max-height:640px){.app{gap:5px;padding-block:5px 6px}.tray{height:76px;padding:3px}}
 #shopChg .shop-what b{font-size:15px;overflow-wrap:anywhere}
 #shopChg .shop-art{display:flex;align-items:center;justify-content:center}
+/* "Open all": every card from every pack in one grid, one tile per robot */
+.pk-stage.reveal.all{grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:10px 7px;align-content:start;min-height:0;padding-block:4px 2px}
+.pk-stage.reveal.all .rv{gap:4px;animation-duration:.36s}
+.pk-stage.reveal.all .rv-tag{min-height:0;font-size:12.5px}
+.pk-stage.reveal.all .rv-tag small{font-size:9.5px;letter-spacing:.04em}
+.pk-stage.reveal.all .rv.rays::before{width:180%;margin:-90% 0 0 -90%}
+/* short phones: a slightly smaller pack picture, so "Open all" and "Pack shop" sit on screen without scrolling */
+@media (max-height:640px){.pk-stage:not(.reveal){min-height:206px;padding-block:2px}.pk-stage:not(.reveal) .pack{width:min(40%,146px)}.pk-sub{min-height:0}}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -4184,7 +4192,7 @@ function packIdle() {
   stage.innerHTML = n ? `<button class="pack" id="pack" type="button" aria-label="Rip open a pack">${packInner()}</button>` : `<div class="pack ghosted" aria-hidden="true">${packInner()}</div>`;
   $("pkLine").textContent = n ? (n === 1 ? "1 pack to open" : n + " packs to open") : "No packs right now";
   $("pkSub").textContent = n ? "Swipe across the top to rip it open. A tap works too." : "Clear lines to fill the pack meter, or come back when a free pack is ready.";
-  $("pkActs").innerHTML = `<button class="btn" data-act="shop" type="button">Pack shop</button>`; packFacts();
+  $("pkActs").innerHTML = (n >= 2 ? `<button class="btn pri" data-act="openall" type="button">Open all ${n}</button>` : "") + `<button class="btn" data-act="shop" type="button">Pack shop</button>`; packFacts();
   const p = $("pack"); if (!p) return;
   let x0 = null, dx = 0;
   p.addEventListener("pointerdown", e => { x0 = e.clientX; dx = 0; try { p.setPointerCapture(e.pointerId); } catch (_) {} });
@@ -4217,6 +4225,63 @@ function openPack() {
   // the pack shakes and glows, then bursts in a flash of light
   if (p && !reduced) { const b = p.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2; setTimeout(() => { if (PK.mode !== "open") return; Fx.flash(.6); Fx.burst(x, y, 26, ["#fff", "#FFE894", "#FF9AD0"], 430); Fx.ring(x, y, b.width, "#FFE894"); }, 300); }
   PK.t = setTimeout(() => reveal(got), reduced ? 0 : 560);
+}
+// "Open all": every waiting pack at once. Each pack is still its own pack (it moves the pity counter, pays the crew its +1 charge and can
+// finish a set; a finished set's reward packs are opened too). The cards are then shown together, one tile per robot, best first.
+const OPENALL_MAX = 60;
+function openAll() {
+  const m = S.meta; if (PK.mode !== "idle" || Core.packsReady(m, Date.now()) < 1) return;
+  const by = {}, sets = [], joined = []; let packs = 0, cards = 0, dust = 0, chg = 0, crewChg = 0, best = 0;
+  while (packs < OPENALL_MAX && Core.takePack(m, Date.now())) {
+    const got = Core.grant(m, Core.rollPack(Math.random, m.pity)); packs++;
+    got.cards.forEach(c => {
+      cards++; const e = by[c.id] || (by[c.id] = { id: c.id, n: 0, isNew: false, lvUp: 0, chg: 0 });
+      e.n++; e.count = c.count; e.chg += c.chg || 0; if (c.isNew) { e.isNew = true; Fresh.add(c.id); if (addCrew(c.id)) joined.push(CARD[c.id].name); } if (c.lvUp) e.lvUp = Math.max(e.lvUp, c.lvUp);
+      best = Math.max(best, CARD[c.id].rar);
+    });
+    sets.push(...got.sets); dust += got.dust; chg += got.chg || 0; crewChg += (got.crew || []).reduce((t, x) => t + x[1], 0);
+    Analytics.track("pack_opened", { rar: Math.max(...got.cards.map(c => CARD[c.id].rar)), fresh: got.cards.filter(c => c.isNew).length, all: 1 }); Season.earn(5);
+  }
+  if (!packs) return;
+  if (m.tut < 2) m.tut = 2;
+  const list = Object.values(by).sort((a, b) => (b.isNew - a.isNew) || (CARD[b.id].rar - CARD[a.id].rar) || (b.n - a.n));
+  const all = { list, packs, cards, sets, joined, dust, chg, crewChg, best };
+  save(); Safe.mark(); PK.mode = "open"; PK.got = all;
+  const p = $("pack"); if (p) p.classList.add("rip");
+  Sfx.rip(); Haptic.play("pack"); $("pkSub").textContent = ""; $("pkLine").textContent = "Opening " + packs + (packs === 1 ? " pack" : " packs") + "…"; $("pkActs").innerHTML = "";
+  if (p && !reduced) { const b = p.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2; setTimeout(() => { if (PK.mode !== "open") return; Fx.flash(.7); Fx.burst(x, y, 40, ["#fff", "#FFE894", "#FF9AD0"], 520); Fx.ring(x, y, b.width * 1.3, "#FFE894"); }, 300); }
+  PK.t = setTimeout(() => revealAll(all), reduced ? 0 : 600);
+}
+function revealAll(all) {
+  const stage = $("pkStage"); if (!stage || PK.mode !== "open") return;
+  stage.className = "pk-stage reveal all";
+  stage.innerHTML = all.list.map((r, i) => `<div class="rv" style="--i:${Math.min(i, 12)}"><div class="card flip r${CARD[r.id].rar}">${cardInner(r.id, r.count, true)}</div><div class="rv-tag${r.isNew ? " new" : ""}"></div></div>`).join("");
+  $("pkLine").textContent = all.cards + " cards"; $("pkSub").textContent = "Tap to show them all now.";
+  const nodes = [...stage.querySelectorAll(".rv")]; let k = 0;
+  const flip = quiet => {
+    const r = all.list[k], n = nodes[k]; k++;
+    n.firstElementChild.classList.add("shown");
+    n.lastElementChild.innerHTML = (r.isNew ? "New" : "×" + r.count) + (r.n > 1 ? `<small>${r.n} cards</small>` : "") + (r.lvUp ? `<small>Level ${r.lvUp}</small>` : "") + (r.chg ? `<small class="plus">+${r.chg} ${r.chg === 1 ? "charge" : "charges"}</small>` : "");
+    if (!quiet) { const rar = CARD[r.id].rar; if (rar >= 2 || k <= 3) Sfx.flip(rar); else Sfx.tick(false); if (rar >= 2) { Haptic.play("rare"); cardFx(n, rar); } }
+  };
+  const gap = Math.max(70, Math.min(220, 2400 / nodes.length));   // the whole show takes about two to three seconds, however many cards
+  const step = () => { if (PK.mode !== "open") return; flip(false); if (k < nodes.length) PK.t = setTimeout(step, gap); else PK.t = setTimeout(done, 450); };
+  const done = () => {
+    if (PK.mode !== "open") return; PK.mode = "done"; stage.onclick = null;
+    const fresh = all.list.filter(r => r.isNew), n = Core.packsReady(S.meta, Date.now()), notes = [];
+    $("pkLine").textContent = all.packs + (all.packs === 1 ? " pack" : " packs") + " opened" + (fresh.length ? ": " + fresh.length + (fresh.length === 1 ? " new robot" : " new robots") : "");
+    if (all.chg) { notes.push("You got +" + all.chg + (all.chg === 1 ? " charge" : " charges") + "!" + (all.crewChg ? " (+" + all.crewChg + " of them for your crew, 1 per robot for every pack.)" : "")); chgSay(all.chg); }
+    if (fresh.length) notes.push("New: " + fresh.map(r => CARD[r.id].name).join(", ") + ".");
+    else notes.push("All repeats this time. Repeats level your robots up: 3 copies for Level 2, 6 for Level 3.");
+    if (all.joined.length) notes.push((all.joined.length > 1 ? all.joined.slice(0, -1).join(", ") + " and " + all.joined[all.joined.length - 1] : all.joined[0]) + " joined your crew.");
+    all.sets.forEach(st => notes.push(SETS[st] + " set complete. Its " + Core.SET_REWARD + " reward packs were opened too."));
+    if (all.dust) notes.push("Repeat cards gave you " + all.dust + " shards.");
+    $("pkSub").textContent = notes.join(" ");
+    $("pkActs").innerHTML = (n >= 2 ? `<button class="btn pri" data-act="openall" type="button">Open all ${n}</button>` : n ? `<button class="btn pri" data-act="another" type="button">Open another</button>` : `<button class="btn" data-act="shop" type="button">Pack shop</button>`) + `<button class="btn" data-act="album" type="button">See album</button>`;
+    packFacts(); renderHud(); renderHub();
+  };
+  stage.onclick = () => { if (PK.mode !== "open") return; clearTimeout(PK.t); while (k < nodes.length) flip(true); Sfx.flip(all.best); const i = all.list.findIndex(r => CARD[r.id].rar === all.best); cardFx(nodes[i], all.best); done(); };
+  PK.t = setTimeout(step, reduced ? 0 : 480);
 }
 // the show when a card turns over: sparkles for every card; a flash, light rays and a shower of gems and coins for the rarer ones
 function cardFx(n, rar) {
@@ -4253,7 +4318,7 @@ function reveal(got) {
     const crewChg = (got.crew || []).reduce((n, x) => n + x[1], 0), allChg = got.chg || 0;
     if (allChg) { notes.unshift("You got +" + allChg + (allChg === 1 ? " charge" : " charges") + "!" + (crewChg ? " (+1 for each robot in your crew just for opening a pack.)" : "")); chgSay(allChg); }
     $("pkSub").textContent = notes.join(" ");
-    $("pkActs").innerHTML = (n ? `<button class="btn pri" data-act="another" type="button">Open another (${n} left)</button>` : `<button class="btn" data-act="shop" type="button">Pack shop</button>`) + `<button class="btn" data-act="album" type="button">See album</button>`;
+    $("pkActs").innerHTML = (n ? `<button class="btn pri" data-act="another" type="button">Open another (${n} left)</button>` : `<button class="btn" data-act="shop" type="button">Pack shop</button>`) + (n >= 2 ? `<button class="btn pri" data-act="openall" type="button">Open all ${n}</button>` : "") + `<button class="btn" data-act="album" type="button">See album</button>`;
     packFacts(); renderHud();
   };
   stage.onclick = () => { if (PK.mode !== "open") return; clearTimeout(PK.t); while (k < nodes.length) flip(true); const top = Math.max(...got.cards.map(c => CARD[c.id].rar)); Sfx.flip(top); cardFx(nodes[got.cards.findIndex(c => CARD[c.id].rar === top)], top); done(); };
@@ -4359,6 +4424,7 @@ function sheetClick(e) {
   const a = b.dataset.act, id = b.dataset.id;
   if (a === "close") closeSheet();
   else if (a === "another") packIdle();
+  else if (a === "openall") { if (PK.mode !== "idle") packIdle(); openAll(); }
   else if (screen === "hub" && (a === "album" || a === "shop" || a === "packs")) { if (a === "shop") Shop.note = ""; openSheet(a); }
   else if (a === "album") { clearTimeout(PK.t); PK.mode = "idle"; view = "album"; viewAlbum(); }
   else if (a === "undetail") $("alDetail").hidden = true;
