@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.Insets;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.Display;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -29,10 +30,26 @@ public class MainActivity extends Activity {
     private Ads ads;
     private Billing billing;
 
+    /** Phones with 90/120 Hz screens make a web page draw up to twice as many frames, and every big effect then misses some of them,
+     *  which shows as stutter. A steady 60 frames a second looks smoother than a jumpy 120, and saves battery, so the game asks for 60. */
+    private void steadyFrames() {
+        try {
+            WindowManager.LayoutParams lp = getWindow().getAttributes();
+            Display d = getWindowManager().getDefaultDisplay();
+            Display.Mode now = d.getMode();
+            for (Display.Mode m : d.getSupportedModes()) {
+                if (Math.abs(m.getRefreshRate() - 60f) < 1f && m.getPhysicalWidth() == now.getPhysicalWidth() && m.getPhysicalHeight() == now.getPhysicalHeight()) { lp.preferredDisplayModeId = m.getModeId(); break; }
+            }
+            lp.preferredRefreshRate = 60f;
+            getWindow().setAttributes(lp);
+        } catch (Throwable ignored) { }
+    }
+
     @Override
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        steadyFrames();
         web = new WebView(this);
         web.setBackgroundColor(0xFF0B1220);
         web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);   // the game's page keeps top priority, even next to a hidden ad page

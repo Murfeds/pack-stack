@@ -463,7 +463,7 @@ svg.gi{fill:none;stroke:var(--gold-3);stroke-width:2.200;stroke-linecap:round;st
 .tbar.low i{background:linear-gradient(180deg,#FF9AA2,#E8263C)}
 .tbar.clk{height:8px}
 .tbar.clk i{background:linear-gradient(180deg,#E7D193,#D38937)}
-@keyframes lowpulse{50%{transform:scale(1.05);filter:brightness(1.45)}}
+@keyframes lowpulse{50%{transform:scale(1.06);opacity:.75}}
 .brand.lvl span:last-child{font-size:1.450em}
 
 /* ---------- special squares ---------- */
@@ -593,7 +593,7 @@ svg.gi{fill:none;stroke:var(--gold-3);stroke-width:2.200;stroke-linecap:round;st
 
 /* ---------- danger glow, world colours ---------- */
 /* the glow only fades in and out (opacity), and the world colour is a plain see-through wash: both stay cheap to draw on a phone */
-body.danger::after{content:"";position:fixed;inset:0;z-index:20;pointer-events:none;box-shadow:inset 0 0 64px 20px rgba(255,50,70,.85);animation:edge 1s ease-in-out infinite}
+body.danger::after{content:"";position:fixed;inset:0;z-index:20;pointer-events:none;box-shadow:inset 0 0 64px 20px rgba(255,50,70,.85);will-change:opacity;animation:edge 1.2s ease-in-out infinite}
 @keyframes edge{50%{opacity:.4}}
 .scene::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,var(--wa,transparent),var(--wb,transparent));opacity:.5;pointer-events:none}
 .board::before{content:"";position:absolute;z-index:2;inset:0;border-radius:6px;background:var(--wt,transparent);mix-blend-mode:soft-light;opacity:.3;pointer-events:none}
@@ -613,7 +613,7 @@ body.danger::after{content:"";position:fixed;inset:0;z-index:20;pointer-events:n
               (store and daily cards), ruled slate (lists), ribbons (titles), shields (levels), round gauges (meters).
    TOKENS     colours, spacing and shadows below are the only ones new rules use.
    STATES     every button shares four: normal, pressed (the face sinks into its frame), disabled (grey), focused (bright rim). */
-@property --gp{syntax:"<percentage>";inherits:true;initial-value:0%}
+@property --gp{syntax:"<percentage>";inherits:false;initial-value:0%}
 :root{
   --navy-0:#070C16; --navy-1:#0B1220; --navy-2:#111C2E; --navy-3:#1A2A42; --navy-4:#27405F; --navy-5:#3A5C86; --navy-6:#5C82B4;
   --brass-1:#4A300F; --brass-2:#8A5F1F; --brass-3:#C99A3C; --brass-4:#E9C97A; --brass-5:#F8EBC4;
@@ -1261,7 +1261,7 @@ textarea.code[readonly]{font:600 11.5px/1.4 ui-monospace,Menlo,Consolas,monospac
 .cslot.spent .cm small{color:#FFD768;text-decoration:underline;text-underline-offset:2px}
 .cslot.help,.cslot.teach{animation:rhelp 1.15s ease-in-out infinite}
 .cslot.help::after,.cslot.teach::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(ellipse at 50% 110%,rgba(255,224,120,.75),rgba(255,224,120,0) 70%);animation:rglow 1.15s ease-in-out infinite;pointer-events:none}
-@keyframes rhelp{0%,100%{transform:translateY(0);filter:brightness(1)}50%{transform:translateY(-4px);filter:brightness(1.28)}}
+@keyframes rhelp{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @keyframes rglow{0%,100%{opacity:.25}50%{opacity:1}}
 .cslot.armed.help,.cslot.armed.teach{animation:none}
 @media (max-width:359px){.cslot{padding:0 3px 0 4px;gap:4px}.cslot .face{width:30px;height:30px}.cslot .chg{left:3px;width:32px}.cslot .cm b{font-size:11px;letter-spacing:0}.cslot .cm small{font-size:9.5px}}
@@ -1358,6 +1358,19 @@ textarea.code[readonly]{font:600 11.5px/1.4 ui-monospace,Menlo,Consolas,monospac
 
 /* the Google Play app: no premium lane on the season track */
 .app .ptier{grid-template-columns:44px minmax(0,1fr)}
+/* ---------- low-power mode: everything that only decorates holds still, and the bursts get simpler ---------- */
+.lowfx .scene *,.lowfx .mini-pack,.lowfx .node.cur,.lowfx .node.cur .sh,.lowfx .play,.lowfx .meter.near,.lowfx .cell.hintg,.lowfx .card-front,.lowfx .pack-body::after,.lowfx .facts div.ready,.lowfx .nearset,.lowfx .foil .mini-pack::after,.lowfx .al-set.done::before,.lowfx .al-set.done::after,.lowfx .cslot.help::after,.lowfx .cslot.teach::after,.lowfx .sp-head,.lowfx .sp-eyes,.lowfx .sp-lamp,.lowfx .sp-gear,.lowfx .gbots.worry .gbot,.lowfx .tab .dot,.lowfx .freebub,.lowfx .cell[data-b]::after{animation:none!important}
+.lowfx .packbtn.has .mini-pack{filter:none}
+.lowfx .cslot.help,.lowfx .cslot.teach{animation:rhelp-lite 1.15s ease-in-out infinite}
+@keyframes rhelp-lite{50%{transform:translateY(-4px)}}
+.lowfx .cell.clr::before{animation-name:clr-lite}
+@keyframes clr-lite{0%{transform:scale(1);opacity:1}30%{transform:scale(1.15);opacity:1}100%{transform:scale(.3);opacity:0}}
+.lowfx .cell.pop::before{animation-name:pop-lite}
+@keyframes pop-lite{0%{transform:translateY(-10%) scale(1.15,.82)}50%{transform:scale(.95,1.06)}100%{transform:none}}
+.lowfx .sweep::after{box-shadow:none}
+body.lowfx.danger::after{animation:none;opacity:.7}
+.lowfx .tbar.low,.lowfx .lim b.low{animation:none}
+.fxon .scene *,.fxon .bots *{animation-play-state:paused!important}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -1427,7 +1440,7 @@ const GAME = {
   name: "Pack Stack",              // the working title: shown on the splash, the home sign, About, and the home-screen icon label
   logo: ["PACK", "STACK"],         // the wordmark, one word per line
   tagline: "Robot workshop puzzles",
-  version: "1.5.1",
+  version: "1.5.2",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "packstacksupport@gmail.com",  // the public support address (store page, About page, privacy policy)
   credits: [["Game design and direction", "Murfer"], ["Code and art", "Built with Claude"], ["Music", "Bouncy, Chill and Epic styles: written in code for this game. Lo-fi style: recorded tracks by HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
@@ -3601,38 +3614,44 @@ const Gems = (() => {
 // gems). There is a hard cap on how many exist at once, and the canvas only redraws while something is moving.
 const Fx = (() => {
   let can = null, g = null, W = 0, H = 0, raf = 0, last = 0, seed = 1234567;
-  const parts = [], MAX = 180, TAU = Math.PI * 2;
+  const parts = [], MAX = 150, TAU = Math.PI * 2;
   const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647, rr = (a, b) => a + rnd() * (b - a);
-  function fit() { if (!g) return; const d = Math.min(2, window.devicePixelRatio || 1); W = window.innerWidth; H = window.innerHeight; can.width = Math.round(W * d); can.height = Math.round(H * d); g.setTransform(d, 0, 0, d, 0, 0); }
+  const lite = () => document.body.classList.contains("lowfx");
+  // the canvas covers the whole screen, so its size is most of its cost: 1.25 pixels per point is plenty for small moving bits (1 in low-power mode)
+  function fit() { if (!g) return; const d = Math.min(window.__FXD || (lite() ? 1 : 1.25), window.devicePixelRatio || 1); W = window.innerWidth; H = window.innerHeight; can.width = Math.round(W * d); can.height = Math.round(H * d); g.setTransform(d, 0, 0, d, 0, 0); }
   function init() { can = $("fx"); try { g = can.getContext("2d"); } catch (_) { g = null; } fit(); window.addEventListener("resize", fit); }
-  function add(p) { if (reduced || !g) return; if (parts.length >= (document.body.classList.contains("lowfx") ? 60 : MAX)) parts.shift(); p.t = -(p.delay || 0); parts.push(p); if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+  function add(p) { if (reduced || !g) return; const cap = lite() ? 48 : MAX; if (parts.length >= cap) { if (lite() && p.k !== 1 && p.k !== 3 && p.k !== 4) return; parts.shift(); } p.t = -(p.delay || 0); parts.push(p); if (!raf) { last = performance.now(); Jank.start(); busy(true); raf = requestAnimationFrame(frame); } }
+  // while bits fly, the slow drifting backdrop holds still (nobody notices a cloud stop for a second), so the phone can spend every frame on the effects
+  let calm = 0; const busy = on => { clearTimeout(calm); if (on) document.documentElement.classList.add("fxon"); else calm = setTimeout(() => document.documentElement.classList.remove("fxon"), 400); };
+  // how smooth a burst of effects really was: every gap between frames while bits are moving is noted, and Perf hears about each burst
+  const Jank = { n: 0, long: 0, t: 0, start() { this.n = 0; this.long = 0; this.t = 0; }, note(gap) { if (gap > 250) return; this.n++; if (gap > 34) this.long++; }, end() { if (this.n >= 8 && window.__perfBurst) window.__perfBurst(this.n, this.long); } };
   function frame(now) {
-    const dt = Math.min(.034, Math.max(0, (now - last) / 1000)); last = now; g.clearRect(0, 0, W, H);
+    const gap = now - last, dt = Math.min(.034, Math.max(0, gap / 1000)); last = now; Jank.note(gap); g.clearRect(0, 0, W, H); const lt = lite();
     for (let pass = 0; pass < 2; pass++) {   // solid bits first, then the glowing ones, which add their light together
       g.globalCompositeOperation = pass ? "lighter" : "source-over";
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i];
         if (!pass) { p.t += dt; if (p.t >= p.life) { parts.splice(i, 1); if (p.done) p.done(); continue; } if (p.t >= 0) move(p, dt); }
-        if (p.t >= 0 && (p.k === 1 || p.k === 2 || p.k === 5) === !!pass) draw(p);
+        if (p.t >= 0 && (p.k === 1 || p.k === 2 || p.k === 5) === !!pass) draw(p, lt);
       }
     }
     g.globalCompositeOperation = "source-over"; g.globalAlpha = 1;
-    raf = parts.length ? requestAnimationFrame(frame) : 0;
+    raf = parts.length ? requestAnimationFrame(frame) : 0; if (!raf) { Jank.end(); busy(false); }
   }
   function move(p, dt) {
     if (p.k === 1) { const u = p.t / p.life, e = u * u * (3 - 2 * u), q = 1 - e; p.px = p.x; p.py = p.y; p.x = q * q * p.x0 + 2 * q * e * p.mx + e * e * p.x1; p.y = q * q * p.y0 + 2 * q * e * p.my + e * e * p.y1; return; }
     p.vy += (p.g || 0) * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += (p.vr || 0) * dt;
   }
   const oval = (x, y, rx, ry) => { g.beginPath(); g.ellipse(x, y, Math.max(.5, rx), ry, 0, 0, TAU); g.fill(); };
-  function draw(p) {
+  function draw(p, lt) {
     const u = p.t / p.life;
     if (p.k === 0) {            // a glass shard
       const s = p.s; g.globalAlpha = 1 - u * u; g.save(); g.translate(p.x, p.y); g.rotate(p.rot);
       g.beginPath(); g.moveTo(0, -s); g.lineTo(s * .75, s * .6); g.lineTo(-s * .65, s * .45); g.closePath(); g.fillStyle = p.col; g.fill();
-      g.beginPath(); g.moveTo(0, -s); g.lineTo(s * .2, s * .15); g.lineTo(-s * .65, s * .45); g.closePath(); g.fillStyle = "rgba(255,255,255,.6)"; g.fill(); g.restore();
+      if (!lt) { g.beginPath(); g.moveTo(0, -s); g.lineTo(s * .2, s * .15); g.lineTo(-s * .65, s * .45); g.closePath(); g.fillStyle = "rgba(255,255,255,.6)"; g.fill(); } g.restore();
     } else if (p.k === 1) {     // a spark with a short tail, flying to a target
       g.globalAlpha = Math.min(1, 1.25 - u); g.strokeStyle = p.col; g.lineWidth = p.s * .9; g.lineCap = "round"; g.beginPath(); g.moveTo(p.px, p.py); g.lineTo(p.x, p.y); g.stroke();
-      g.fillStyle = "#fff"; g.beginPath(); g.arc(p.x, p.y, p.s, 0, TAU); g.fill(); g.globalAlpha *= .3; g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.s * 2.6, 0, TAU); g.fill();
+      g.fillStyle = "#fff"; g.beginPath(); g.arc(p.x, p.y, p.s, 0, TAU); g.fill(); if (!lt) { g.globalAlpha *= .3; g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.s * 2.6, 0, TAU); g.fill(); }
     } else if (p.k === 2) {     // a four-point twinkle
       const s = p.s * Math.sin(Math.PI * u); g.globalAlpha = Math.min(1, 2 - 2 * u); g.fillStyle = p.col; g.beginPath();
       for (let i = 0; i < 8; i++) { const a = p.rot + i * TAU / 8, r = i % 2 ? s * .26 : s; g.lineTo(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r); } g.closePath(); g.fill();
@@ -3646,13 +3665,13 @@ const Fx = (() => {
     }
   }
   return {
-    init,
+    init, fit,
     count: () => parts.length,
     // a gem breaks: shards fly out and fall, glitter hangs for a moment
     shatter(r, c, n, delay) {
-      const P = Gems.PAL[c] || Gems.PAL[6], x = r.left + r.width / 2, y = r.top + r.height / 2, sz = r.width;
+      const P = Gems.PAL[c] || Gems.PAL[6], x = r.left + r.width / 2, y = r.top + r.height / 2, sz = r.width; const lt = lite(); if (lt) n = Math.ceil(n / 2);
       for (let i = 0; i < n; i++) { const a = rr(0, TAU), v = rr(90, 300) * sz / 42; add({ k: 0, x: x + Math.cos(a) * sz * .15, y: y + Math.sin(a) * sz * .15, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, g: 1100, rot: rr(0, TAU), vr: rr(-12, 12), s: rr(.1, .2) * sz, col: P[i % 3 ? 1 : 0], life: rr(.45, .8), delay }); }
-      for (let i = 0; i < 2; i++) add({ k: 2, x: x + rr(-.4, .4) * sz, y: y + rr(-.4, .4) * sz, vx: 0, vy: -14, rot: rr(0, 1), s: rr(.16, .3) * sz, col: "#fff", life: rr(.35, .6), delay: delay + rr(0, .12) });
+      for (let i = 0, m = lt ? 1 : 2; i < m; i++) add({ k: 2, x: x + rr(-.4, .4) * sz, y: y + rr(-.4, .4) * sz, vx: 0, vy: -14, rot: rr(0, 1), s: rr(.16, .3) * sz, col: "#fff", life: rr(.35, .6), delay: delay + rr(0, .12) });
     },
     // sparks that curve across the screen and land on a target, such as the pack meter
     fly(x0, y0, x1, y1, n, col, done) {
@@ -3668,7 +3687,7 @@ const Fx = (() => {
       for (let i = 0; i < n; i++) add({ k: kind === "coin" ? 3 : 4, x: rr(.04, .96) * W, y: rr(-90, -12), vx: rr(-40, 40), vy: rr(120, 330), g: 900, rot: rr(0, TAU), vr: rr(-9, 9), s: kind === "coin" ? rr(7, 11) : rr(18, 30), c: 1 + Math.floor(rnd() * 7), life: rr(1.1, 1.8), delay: rr(0, .5) });
     },
     // a quick white flash over the whole screen
-    flash(a) { const f = $("flash"); if (reduced || !f) return; f.style.setProperty("--a", a); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); }
+    flash(a) { const f = $("flash"); if (reduced || !f || lite()) return; f.style.setProperty("--a", a); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); }
   };
 })();
 
@@ -6682,13 +6701,26 @@ function viewDev() {
 
 /* ---- performance watcher: if frames get slow, effects are turned down automatically ---- */
 const Perf = {
-  avg: 0, slow: 0, fast: 0, on: false, told: false, off: QUICK,
-  set(on, quiet) { if (on === this.on) return; this.on = on; document.body.classList.toggle("lowfx", on); Music.lowPower(on); Scene.apply(); if (on && !quiet && !this.told) { this.told = true; toast("Low-power mode on: fewer effects, same game."); } },
-  // one reading (average milliseconds per frame). Two slow readings in a row turn effects down; three smooth ones turn them back up.
-  feed(ms) { this.avg = ms; const mode = S.meta ? S.meta.lowp : 0; if (mode === 1) return this.set(true, true); if (mode === 2) return this.set(false, true); if (ms > 26) { this.slow++; this.fast = 0; if (this.slow >= 2) this.set(true); } else if (ms < 19) { this.fast++; this.slow = 0; if (this.fast >= 3) this.set(false); } else { this.slow = 0; this.fast = 0; } },
+  avg: 0, slow: 0, fast: 0, on: false, told: false, off: QUICK, why: "", bad: 0, bursts: 0,
+  set(on, quiet, why) {
+    if (on) this.why = why || this.why || "idle"; else this.why = "";
+    if (on === this.on) return; this.on = on; document.body.classList.toggle("lowfx", on); Music.lowPower(on); Scene.apply(); try { Fx.fit(); } catch (e) {}
+    if (on && !quiet && !this.told) { this.told = true; toast("Low-power mode on: lighter effects for a smoother game."); }
+  },
+  // one reading (average milliseconds per frame). Two slow readings in a row turn effects down; three smooth ones turn them back up
+  // (but only when the slow readings were what turned them down: a phone that stutters during line clears stays light)
+  feed(ms) { this.avg = ms; const mode = S.meta ? S.meta.lowp : 0; if (mode === 1) return this.set(true, true); if (mode === 2) return this.set(false, true); if (ms > 26) { this.slow++; this.fast = 0; if (this.slow >= 2) this.set(true, false, this.why === "burst" ? "burst" : "idle"); } else if (ms < 19) { this.fast++; this.slow = 0; if (this.fast >= 3 && this.why !== "burst") this.set(false); } else { this.slow = 0; this.fast = 0; } },
+  // after every burst of effects (a line clear, a pack opening): how many frames it drew and how many came late.
+  // Two choppy bursts in a row switch to smooth mode for good on this phone (Settings can still force it either way).
+  burst(n, late) {
+    this.bursts++; if (this.off || this.why === "burst") return; const mode = S.meta ? S.meta.lowp : 0; if (mode) return;
+    if (late >= 4 && late / n >= .2) this.bad++; else this.bad = Math.max(0, this.bad - 1);
+    if (this.bad >= 2) { this.set(true, false, "burst"); try { localStorage.setItem("packstack.smooth", "1"); } catch (e) {} }
+  },
   sample() { if (this.off || document.hidden) return; let n = 0, t0 = 0; const tick = t => { if (!n) t0 = t; if (++n < 46) requestAnimationFrame(tick); else this.feed((t - t0) / 45); }; requestAnimationFrame(tick); },
-  apply() { const mode = S.meta.lowp; if (mode === 1) this.set(true, true); else if (mode === 2) this.set(false, true); }
+  apply() { const mode = S.meta.lowp; if (mode === 1) this.set(true, true); else if (mode === 2) { this.set(false, true); try { localStorage.removeItem("packstack.smooth"); } catch (e) {} } else { let k = null; try { k = localStorage.getItem("packstack.smooth"); } catch (e) {} if (k && !this.off) this.set(true, true, "burst"); } }
 };
+window.__perfBurst = (n, late) => Perf.burst(n, late);
 setInterval(() => Perf.sample(), 9000);
 
 /* ---- offline: a service worker keeps the whole game on the phone. It can only be installed when the game is served from its own
@@ -6725,7 +6757,7 @@ function settingsExtra() {
   const m = S.meta, sw = (key, label, on) => `<button class="sw" data-act="${key === "anOk" ? "an-toggle" : "set"}" data-id="${key}" type="button" role="switch" aria-checked="${on}"><span>${label}</span><b>${on ? "on" : "off"}</b></button>`;
   const seg = (key, opts, label, cur) => `<div class="seg" role="radiogroup" aria-label="${label}">${opts.map((t, i) => `<button class="segb" data-act="num" data-id="${key}" data-v="${i}" type="button" role="radio" aria-checked="${cur === i}">${t}</button>`).join("")}</div>`;
   return `<section class="mn" id="mnAccess"><h3>Accessibility</h3><div class="sws">${sw("big", "Large text", !!m.big)}${sw("hc", "High contrast", !!m.hc)}</div><p class="note">Gems are told apart by shape as well as colour (seven different cuts), so nothing depends on colour alone. Left-handed layout and Reduced motion are just above.</p></section>` +
-    `<section class="mn" id="mnPerf"><h3>Performance</h3><p class="note">Low-power mode turns effects down. Automatic does it only when the phone is struggling.</p>${seg("lowp", ["Automatic", "Always", "Never"], "Low-power mode", m.lowp)}<div class="sws" style="margin-top:8px">${sw("season", "Seasonal looks", !!m.season)}</div></section>` +
+    `<section class="mn" id="mnPerf"><h3>Performance</h3><p class="note">Low-power mode uses lighter effects so the game stays smooth. Automatic turns it on by itself if line clears or pack openings stutter on this phone.</p>${seg("lowp", ["Automatic", "Always", "Never"], "Low-power mode", m.lowp)}<div class="sws" style="margin-top:8px">${sw("season", "Seasonal looks", !!m.season)}</div></section>` +
     `<section class="mn" id="mnPrivacy"><h3>Privacy</h3><div class="sws">${sw("anOk", "Keep play stats on this phone", m.anOk === 1)}</div><p class="note">No name, contacts or location. Used to see which levels are too hard.</p><div class="row"><button class="btn" data-act="tab" data-id="legal-privacy" type="button">Privacy Policy</button><button class="btn" data-act="tab" data-id="legal-terms" type="button">Terms</button><button class="btn" data-act="tab" data-id="legal-data" type="button">Your data</button>${APP && Native.ads ? `<button class="btn" data-act="ad-privacy" type="button">Ad privacy choices</button>` : ""}</div></section>` +
     `<section class="mn" id="mnAbout"><h3>About<span>version ${GAME.version}</span></h3><div class="row"><button class="btn" data-act="tab" data-id="about" type="button">About and credits</button><button class="btn" data-act="tab" data-id="report" type="button">Report a problem</button><button class="btn" data-act="tab" data-id="odds" type="button">Pack odds</button></div></section>`;
 }
