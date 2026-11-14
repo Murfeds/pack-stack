@@ -1424,6 +1424,14 @@ body.lowfx.danger::after{animation:none;opacity:.7}
 .app .rv .card.r3 .card-front{animation:none}
 .pkopen .scene *{animation-play-state:paused!important}
 .pack{will-change:transform,opacity}
+/* the album in the app: the gold shimmer of a legendary card and of a finished set was the page re-painting them on every frame (a finished
+   set re-painted its whole box, cards and all). The gold now holds still, and a band of light sweeps across the legendary card instead,
+   moved by the graphics chip the way the sheen on a pack is. */
+.app .card.r3 .card-front{animation:none;background-position:38% 0}
+.app .card.r3 .pane::after{content:"";position:absolute;z-index:3;top:-20%;bottom:-20%;left:0;width:40%;background:linear-gradient(90deg,rgba(255,240,190,0),rgba(255,240,190,.5) 50%,rgba(255,240,190,0));transform:translateX(-160%) skewX(-18deg);animation:foil 3.4s ease-in-out infinite;pointer-events:none}
+.app .rv .card.r3 .pane::after,.lowfx .card.r3 .pane::after{display:none}
+.app .al-set.done{animation:none;background-position:0 0,38% 0}
+.app .al-set.done::before,.app .al-set.done::after{filter:none}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -1493,7 +1501,7 @@ const GAME = {
   name: "Pack Stack",              // the working title: shown on the splash, the home sign, About, and the home-screen icon label
   logo: ["PACK", "STACK"],         // the wordmark, one word per line
   tagline: "Robot workshop puzzles",
-  version: "1.6.4",
+  version: "1.6.5",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "packstacksupport@gmail.com",  // the public support address (store page, About page, privacy policy)
   credits: [["Game design and direction", "Murfer"], ["Code and art", "Built with Claude"], ["Music", "Bouncy, Chill and Epic styles: written in code for this game. Lo-fi style: recorded tracks by HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
