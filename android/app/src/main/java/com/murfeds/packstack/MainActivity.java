@@ -6,6 +6,8 @@ import android.graphics.Insets;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
@@ -33,16 +35,23 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         web = new WebView(this);
         web.setBackgroundColor(0xFF0B1220);
-        setContentView(web);
-        // keep the game inside the safe area (Android 15+ draws apps edge to edge, under the status bar and gesture bar)
-        web.setOnApplyWindowInsetsListener((v, insets) -> {
+        // Keep the game inside the safe area. Android 15+ draws every app edge to edge, under the status bar, the camera hole
+        // and the gesture bar. A WebView ignores its own padding, so the game sits inside a frame and the FRAME gets the padding:
+        // the game is pushed clear of the status bar / camera at the top and the gesture bar at the bottom, and the strips
+        // left over are painted in the game's background colour.
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xFF0B1220);
+        root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        setContentView(root);
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 Insets b = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout() | WindowInsets.Type.ime());
                 v.setPadding(b.left, b.top, b.right, b.bottom);
             } else {
                 v.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(), insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
             }
-            return insets;
+            // the frame has used the insets up: the game page inside must not add the same space a second time
+            return Build.VERSION.SDK_INT >= 30 ? WindowInsets.CONSUMED : insets.consumeSystemWindowInsets();
         });
 
         final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
