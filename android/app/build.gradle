@@ -1,6 +1,6 @@
 plugins { id 'com.android.application' }
 
-// ad ids live in android/ads.properties (Google's test ids until the real ones are filled in)
+// ad ids live in android/ads.properties: test ids for the debug build, the real ones for the release build
 def adIds = new Properties()
 file("$rootDir/ads.properties").withInputStream { adIds.load(it) }
 
@@ -13,13 +13,22 @@ android {
         targetSdk 36
         versionCode (System.getenv('VERSION_CODE') ? System.getenv('VERSION_CODE').toInteger() : 1)
         versionName '1.5.1'
-        manifestPlaceholders = [admobAppId: adIds.getProperty('ADMOB_APP_ID')]
-        buildConfigField 'String', 'AD_REWARDED', "\"${adIds.getProperty('AD_REWARDED')}\""
-        buildConfigField 'String', 'AD_INTERSTITIAL', "\"${adIds.getProperty('AD_INTERSTITIAL')}\""
     }
     buildFeatures { buildConfig true }
     buildTypes {
-        release { minifyEnabled false }
+        // the Google Play file: the real ad ids
+        release {
+            minifyEnabled false
+            manifestPlaceholders = [admobAppId: adIds.getProperty('ADMOB_APP_ID')]
+            buildConfigField 'String', 'AD_REWARDED', "\"${adIds.getProperty('AD_REWARDED')}\""
+            buildConfigField 'String', 'AD_INTERSTITIAL', "\"${adIds.getProperty('AD_INTERSTITIAL')}\""
+        }
+        // the test-link app: Google's test ads only
+        debug {
+            manifestPlaceholders = [admobAppId: adIds.getProperty('TEST_ADMOB_APP_ID')]
+            buildConfigField 'String', 'AD_REWARDED', "\"${adIds.getProperty('TEST_AD_REWARDED')}\""
+            buildConfigField 'String', 'AD_INTERSTITIAL', "\"${adIds.getProperty('TEST_AD_INTERSTITIAL')}\""
+        }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     androidResources { noCompress 'html' }
