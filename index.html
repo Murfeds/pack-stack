@@ -1493,7 +1493,7 @@ const GAME = {
   name: "Pack Stack",              // the working title: shown on the splash, the home sign, About, and the home-screen icon label
   logo: ["PACK", "STACK"],         // the wordmark, one word per line
   tagline: "Robot workshop puzzles",
-  version: "1.6.3",
+  version: "1.6.4",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "packstacksupport@gmail.com",  // the public support address (store page, About page, privacy policy)
   credits: [["Game design and direction", "Murfer"], ["Code and art", "Built with Claude"], ["Music", "Bouncy, Chill and Epic styles: written in code for this game. Lo-fi style: recorded tracks by HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
@@ -4751,6 +4751,8 @@ function firePower(r, c) {
 
 // ---- sheets ----
 function openSheet(name) {
+  clearTimeout(menuMore.t); menuMore.parts = menuMore.after = null;
+  window.__busyUntil = performance.now() + 700;   // background jobs (drawing robot and theme pictures) wait while a page is opening
   if (drag) dragEnd(); disarm(); robotClear(); document.querySelectorAll(".toast").forEach(t => t.remove());
   if (view === "album" && name !== "album") Fresh.clear();
   clearTimeout(PK.t); PK.mode = "idle";
@@ -4758,7 +4760,7 @@ function openSheet(name) {
   navBack = false; const changed = view !== name;
   view = name; sheetEl.hidden = false; sheetEl.classList.toggle("docked", screen === "hub"); sheetEl.dataset.view = name; Analytics.page(name);
   if (screen === "play" && changed && (name === "menu" || name === "album")) Perf.watch(name === "menu" ? "Menu open" : "Album open");
-  if (name === "packs") viewPacks(); else if (name === "album") viewAlbum(); else if (name === "shop") viewShop(); else if (name === "menu") viewMenu(); else hubView(name);
+  if (name === "packs") viewPacks(); else if (name === "album") viewAlbum(); else if (name === "shop") viewShop(); else if (name === "menu") viewMenu(changed); else hubView(name);
   if (changed) again(sheetIn, "viewin");
   if (screen === "hub") { markTab(name); renderHub(); return; }
   const b = sheetIn.querySelector("[data-act=close]"); if (b) b.focus({ preventScroll: true });
@@ -4814,7 +4816,7 @@ function dropCrew(id) {
 }
 function openPack() {
   if (PK.mode !== "idle" || !Core.takePack(S.meta, Date.now())) return;
-  Perf.watch("Pack tap");
+  Perf.watch("Pack tap"); window.__busyUntil = performance.now() + 2500;
   const got = Core.grant(S.meta, Core.rollPack(Math.random, S.meta.pity));
   got.joined = got.cards.filter(c => c.isNew && addCrew(c.id)).map(c => CARD[c.id].name);
   got.cards.forEach(c => { if (c.isNew) Fresh.add(c.id); });
@@ -4834,7 +4836,7 @@ let pkBusyT = 0;
 function pkBusy(on) { clearTimeout(pkBusyT); document.documentElement.classList.toggle("pkopen", !!on); if (on) pkBusyT = setTimeout(() => pkBusy(false), 9000); }
 function openAll() {
   const m = S.meta; if (PK.mode !== "idle" || Core.packsReady(m, Date.now()) < 1) return;
-  Perf.watch("Pack tap");
+  Perf.watch("Pack tap"); window.__busyUntil = performance.now() + 2500;
   const by = {}, sets = [], joined = []; let packs = 0, cards = 0, dust = 0, chg = 0, crewChg = 0, best = 0;
   while (packs < OPENALL_MAX && Core.takePack(m, Date.now())) {
     const got = Core.grant(m, Core.rollPack(Math.random, m.pity)); packs++;
@@ -4859,18 +4861,24 @@ function openAll() {
 function revealAll(all) {
   const stage = $("pkStage"); if (!stage || PK.mode !== "open") return;
   stage.className = "pk-stage reveal all";
-  stage.innerHTML = all.list.map((r, i) => `<div class="rv" style="--i:${Math.min(i, 12)}"><div class="card flip r${CARD[r.id].rar}">${cardInner(r.id, r.count, true)}</div><div class="rv-tag${r.isNew ? " new" : ""}"></div></div>`).join("");
+  // building two dozen cards in one go made the page stand still for a moment just as the pack burst: the first eight are built now, the rest
+  // eight at a time over the next frames (they fly in later anyway). more() finishes at once if they are needed sooner.
+  const one = (r, i) => `<div class="rv" style="--i:${Math.min(i, 12)}"><div class="card flip r${CARD[r.id].rar}">${cardInner(r.id, r.count, true)}</div><div class="rv-tag${r.isNew ? " new" : ""}"></div></div>`;
+  let built = Math.min(all.list.length, QUICK ? all.list.length : 8); stage.innerHTML = all.list.slice(0, built).map(one).join("");
+  const more = n => { if (built >= all.list.length) return; const to = Math.min(all.list.length, built + n); stage.insertAdjacentHTML("beforeend", all.list.slice(built, to).map((r, j) => one(r, built + j)).join("")); built = to; };
+  const drip = () => { if (PK.mode !== "open" || !stage.isConnected || built >= all.list.length) return; more(8); requestAnimationFrame(drip); }; requestAnimationFrame(drip);
   $("pkLine").textContent = all.cards + " cards"; $("pkSub").textContent = "Tap to show them all now.";
-  const nodes = [...stage.querySelectorAll(".rv")]; let k = 0;
+  const nodes = stage.getElementsByClassName("rv"), total = all.list.length; let k = 0;
   const flip = quiet => {
-    const r = all.list[k], n = nodes[k]; k++;
+    if (k >= built) more(total);
+    const r = all.list[k], n = nodes[k]; k++; if (!n) return;
     const box = quiet || reduced ? null : n.firstElementChild.getBoundingClientRect();   // measured BEFORE this card is changed, while the page is still settled
     n.firstElementChild.classList.add("shown");
     n.lastElementChild.innerHTML = (r.isNew ? "New" : "×" + r.count) + (r.n > 1 ? `<small>${r.n} cards</small>` : "") + (r.lvUp ? `<small>Level ${r.lvUp}</small>` : "") + (r.chg ? `<small class="plus">+${r.chg} ${r.chg === 1 ? "charge" : "charges"}</small>` : "");
     if (!quiet) { const rar = CARD[r.id].rar; if (rar >= 2 || k <= 3) Sfx.flip(rar); else Sfx.tick(false); if (rar >= 2) { Haptic.play("rare"); cardFx(n, rar, box); } }
   };
-  const gap = Math.max(70, Math.min(220, 2400 / nodes.length));   // the whole show takes about two to three seconds, however many cards
-  const step = () => { if (PK.mode !== "open") return; flip(false); if (k < nodes.length) PK.t = setTimeout(step, gap); else PK.t = setTimeout(done, 450); };
+  const gap = Math.max(70, Math.min(220, 2400 / total));   // the whole show takes about two to three seconds, however many cards
+  const step = () => { if (PK.mode !== "open") return; flip(false); if (k < total) PK.t = setTimeout(step, gap); else PK.t = setTimeout(done, 450); };
   const done = () => {
     if (PK.mode !== "open") return; PK.mode = "done"; stage.onclick = null; pkBusy(false);
     const fresh = all.list.filter(r => r.isNew), n = Core.packsReady(S.meta, Date.now()), notes = [];
@@ -4885,7 +4893,7 @@ function revealAll(all) {
     $("pkActs").innerHTML = (n >= 2 ? `<button class="btn pri" data-act="openall" type="button">Open all ${n}</button>` : n ? `<button class="btn pri" data-act="another" type="button">Open another</button>` : `<button class="btn" data-act="shop" type="button">Pack shop</button>`) + `<button class="btn" data-act="album" type="button">See album</button>`;
     packFacts(); renderHud(); renderHub();
   };
-  stage.onclick = () => { if (PK.mode !== "open") return; clearTimeout(PK.t); while (k < nodes.length) flip(true); Sfx.flip(all.best); const i = all.list.findIndex(r => CARD[r.id].rar === all.best); cardFx(nodes[i], all.best); done(); };
+  stage.onclick = () => { if (PK.mode !== "open") return; clearTimeout(PK.t); more(total); while (k < total) flip(true); Sfx.flip(all.best); const i = all.list.findIndex(r => CARD[r.id].rar === all.best); cardFx(nodes[i], all.best); done(); };
   PK.t = setTimeout(step, reduced ? 0 : 480);
 }
 // the show when a card turns over: sparkles for every card; a flash, light rays and a shower of gems and coins for the rarer ones
@@ -5008,12 +5016,17 @@ function viewShop() {
     `<div class="row"><button class="btn" data-act="packs" type="button">Back to packs</button></div></div>`;
   $("sheetBody").scrollTop = y;
 }
-function viewMenu() {
-  const m = S.meta, play = screen === "play", lv = play && !!S.run.lv;
+// The Settings page is long. Built all at once, the page stood still for a tenth of a second (much more the first time) before anything showed.
+// On a fresh opening only the top two sections are built at once; the rest follows in two steps over the next blinks, below what is on screen.
+// menuFlush() finishes it at once (any tap inside the page does that first), so nothing ever acts on a half-built page.
+const menuMore = { t: 0, parts: null, after: null };
+function menuFlush() { clearTimeout(menuMore.t); const b = $("sheetBody"), q = menuMore.parts, f = menuMore.after; menuMore.parts = menuMore.after = null; if (!q || !b || view !== "menu") return; b.insertAdjacentHTML("beforeend", q.join("")); if (f) f(); }
+function viewMenu(fresh) {
+  const m = S.meta, play = screen === "play", lv = play && !!S.run.lv; clearTimeout(menuMore.t); menuMore.parts = menuMore.after = null;
   const seg = (key, opts, label) => `<div class="seg" role="radiogroup" aria-label="${label}">${opts.map((t, i) => `<button class="segb" data-act="num" data-id="${key}" data-v="${i}" type="button" role="radio" aria-checked="${m[key] === i}">${t}</button>`).join("")}</div>`;
   const slide = (key, label) => `<label class="slide"><span>${label}</span><output>${m[key]}%</output><input type="range" data-id="${key}" min="0" max="100" step="5" value="${m[key]}" aria-label="${label}"></label>`;
   const sw = (key, label) => `<button class="sw" ${key === "sound" ? 'id="mnSound" ' : ""}data-act="set" data-id="${key}" type="button" role="switch" aria-checked="${!!m[key]}"><span>${label}</span><b>${m[key] ? "on" : "off"}</b></button>`;
-  sheetIn.innerHTML = head(play ? "Paused" : "Settings") + `<div class="sheet-body" id="sheetBody">` +
+  const top = head(play ? "Paused" : "Settings") + `<div class="sheet-body" id="sheetBody">`, body =
     (play ? `<section class="mn"><div class="row pause"><button class="btn pri" data-act="close" type="button">Resume</button><button class="btn" data-act="${lv ? "restart-yes" : "restart"}" type="button">Restart</button><button class="btn" data-act="home" type="button">${lv ? "Quit to map" : "Home"}</button></div></section>` : "") +
     `<section class="mn"><h3>Controls</h3><p class="note">Drag style: where a block sits while you drag it.</p>${seg("drag", ["Under finger", "Slight lift", "Big lift"], "Drag style")}<p class="note">Placement help: if you let go a little off, the block slides into the nearest free spot. The ghost always shows where it will land.</p>${seg("snap", ["Off", "Normal", "Generous"], "Placement help")}</section>` +
     lookSection() +
@@ -5023,8 +5036,13 @@ function viewMenu() {
     `<section class="mn"><h3>How to play</h3><ol class="how">${HOWTO.map(t => `<li>${t}</li>`).join("")}</ol></section>` +
     `<section class="mn"><h3>Your save</h3><p class="savedline" id="mnSaved" role="status"></p><div id="mnSaveErr"></div><p id="mnSave"></p><div class="row" id="mnSaveBtn"></div></section>` +
     `<section class="mn"><h3>Move to another phone</h3><p class="note">A save code holds your whole game as text. Copy it on the old phone and paste it on the new one.</p><div class="row"><button class="btn" data-act="export" type="button">Show my save code</button><button class="btn" data-act="import" type="button">Enter a code</button></div><div id="mnCode"></div></section>` +
-    `<section class="mn"><h3>Start over</h3><div id="mnAsk"></div></section></div>`;
-  menuAsk(""); renderSave(); nowPlaying(); savedLine(); fillThumbs();
+    `<section class="mn"><h3>Start over</h3><div id="mnAsk"></div></section>`;
+  const after = () => { menuAsk(""); renderSave(); nowPlaying(); savedLine(); fillThumbs(); };
+  const parts = fresh === true && !QUICK ? body.split(/(?=<section class="mn")/) : null;
+  if (!parts || parts.length < 5) { sheetIn.innerHTML = top + body + "</div>"; after(); return; }
+  sheetIn.innerHTML = top + parts.slice(0, 2).join("") + "</div>";
+  const step2 = () => { const b = $("sheetBody"); if (!b || view !== "menu" || !menuMore.parts) return; b.insertAdjacentHTML("beforeend", menuMore.parts.splice(0, 2).join("")); if (menuMore.parts.length) menuMore.t = setTimeout(menuFlush, 120); else menuFlush(); };
+  menuMore.parts = parts.slice(2); menuMore.after = after; menuMore.t = setTimeout(step2, 60);
 }
 function menuAsk(kind) {
   const el = $("mnAsk"); if (!el) return;
@@ -5041,6 +5059,7 @@ function renderSave() {
   b.innerHTML = st === "ask" ? `<button class="btn pri" data-act="cloud" type="button">Save to my Claude account</button>` : "";
 }
 function sheetClick(e) {
+  if (menuMore.parts) menuFlush();   // a tap inside a half-built Settings page finishes the page first
   const b = e.target.closest("[data-act],[data-card]"); if (!b) return;
   if (b.dataset.card) return showDetail(b.dataset.card);
   const a = b.dataset.act, id = b.dataset.id;
@@ -6445,8 +6464,11 @@ const Bots = (() => {
   // for Settings. While a level or a run is being played (and no page is open over it) only an asked-for robot is drawn, and only every half second.
   function warmPics() {
     if (pixT) return; pixQ = Core.CARDS.map(c => c.id);
+    // every lettering style is loaded ahead of time too, so that the first page that uses one does not have to stop and unpack it
+    setTimeout(() => { try { document.fonts.forEach(f => { if (f.status === "unloaded") f.load().catch(() => {}); }); } catch (e) {} }, 900);
     const go = () => {
       pixT = setTimeout(go, 100);
+      if (performance.now() < (window.__busyUntil || 0)) return;   // a page is opening or a pack is being opened: stay out of the way
       const playing = typeof screen !== "undefined" && screen === "play" && (typeof view === "undefined" || !view), now = Date.now();
       while (pixWant.length && pix.has(pixWant[0])) pixWant.shift();
       if (pixWant.length) { if (!playing || now - pixLast > 500) { pixLast = now; pixMake(pixWant.shift()); } return; }
@@ -6576,8 +6598,8 @@ function viewHome() {
 let thumbFillT = 0;
 function fillThumbs() {
   clearTimeout(thumbFillT);
-  const step = () => { const el = document.querySelector("#sheet [data-lazy]"); if (!el) return; const id = el.dataset.lazy; el.removeAttribute("data-lazy"); try { el.style.backgroundImage = `url(${Scene.thumb(id, S.meta.tod, !!el.dataset.big)})`; } catch (e) {} thumbFillT = setTimeout(step, 30); };
-  thumbFillT = setTimeout(step, 180);
+  const step = () => { if (typeof menuMore !== "undefined" && menuMore.parts) { thumbFillT = setTimeout(step, 80); return; } const el = document.querySelector("#sheet [data-lazy]"); if (!el) return; const id = el.dataset.lazy; el.removeAttribute("data-lazy"); try { el.style.backgroundImage = `url(${Scene.thumb(id, S.meta.tod, !!el.dataset.big)})`; } catch (e) {} thumbFillT = setTimeout(step, 45); };
+  thumbFillT = setTimeout(step, 450);
 }
 function lookSection() {
   const m = S.meta, an = m.bgAnim === 3 ? (reduced ? 1 : 0) : m.bgAnim;
@@ -7119,7 +7141,7 @@ function polishAct(a, id, b) {
   else if (a === "restore") { if (!APP) toast("Nothing to restore here. In the app version this brings back things you paid for once, like Remove ads."); else if (Shop.store) Shop.restore().then(() => toast("Checked with Google Play. Anything still waiting has been handed over.")); else { Shop.retry(); toast("Cannot reach Google Play right now. Check your connection and try again."); } }
   else if (a === "save-retry") { save(); savedLine(); toast(Safe.ok ? "Saved." : "Still could not save."); }
   else if (a === "net-retry") { Live.load().then(() => { toast(Live.state === "live" ? "Back online." : online() ? "Still using the built-in settings." : "Still offline."); }); }
-  else if (a === "go-code") { closePop(); goHub("menu"); setTimeout(() => { const b2 = document.querySelector('[data-act="import"]'); if (b2) { b2.scrollIntoView({ block: "center" }); b2.click(); } }, 60); }
+  else if (a === "go-code") { closePop(); goHub("menu"); menuFlush(); setTimeout(() => { const b2 = document.querySelector('[data-act="import"]'); if (b2) { b2.scrollIntoView({ block: "center" }); b2.click(); } }, 60); }
   else return false;
   return true;
 }
