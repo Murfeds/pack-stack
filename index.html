@@ -315,7 +315,7 @@ p{margin:0}
 @keyframes sip{0%{filter:brightness(2)}100%{filter:brightness(1)}}
 @keyframes tubeglow{0%,100%{box-shadow:0 0 0 2px var(--outline),0 3px 0 2px var(--outline),0 0 0 rgba(222,186,103,0)}50%{box-shadow:0 0 0 2px var(--outline),0 3px 0 2px var(--outline),0 0 16px 4px rgba(222,186,103,.95)}}
 @keyframes packwin{0%{transform:scale(1)}25%{transform:scale(1.5) rotate(-12deg);filter:drop-shadow(0 0 12px #DEB868)}50%{transform:scale(1.15) rotate(10deg);filter:drop-shadow(0 0 16px #DEB868)}75%{transform:scale(1.3) rotate(-4deg);filter:drop-shadow(0 0 10px #DEB868)}100%{transform:scale(1);filter:none}}
-@keyframes bump{0%{transform:scale(1.22)}100%{transform:scale(1)}}
+@keyframes bump{0%{transform:scale(1.22)}100%{transform:scale(1)}}@keyframes bump2{0%{transform:scale(1.22)}100%{transform:scale(1)}}
 @keyframes wig{0%,70%,100%{transform:rotate(8deg)}78%{transform:rotate(-8deg) scale(1.12)}86%{transform:rotate(14deg) scale(1.12)}94%{transform:rotate(2deg)}}
 @keyframes nudge{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
@@ -1395,6 +1395,18 @@ body.lowfx.danger::after{animation:none;opacity:.7}
 #fxgl{position:fixed;inset:0;z-index:65;width:100%;height:100%;pointer-events:none}
 .gl .cell.clr.glc::before{animation:none;opacity:0}
 .gl #fx{display:none}
+/* in the app the pack meter jumps to its new level (sliding it made the page re-style and re-paint on every frame for half a second), and the goal tick does not glow */
+.app .meter{transition:none}
+.app .goal.tick b{animation:none}
+/* in the app the gold lettering gets its dark edge from two shadow passes instead of five (each pass is drawn again on every frame the lettering moves) */
+.app{--edge:drop-shadow(0 1.5px 0 var(--outline)) drop-shadow(0 -1px 0 var(--outline))}
+.gl .meter.sip,.gl .meter.sip i{animation:none}
+/* the board is always its own picture for the graphics chip. Before, it only became one at the instant it shook, turned or rose, and
+   painting the whole board for that (every gem, at full sharpness) landed on the first frame of the move. The turn and the rise also
+   wait a blink in their starting pose, so that first frame is spent painting the new board, not moving it. */
+.board{will-change:transform}
+.board.spin{animation:spin .45s cubic-bezier(.3,1.3,.5,1) 50ms backwards}
+.board.lift{animation:lift .35s ease-out 50ms backwards}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -1464,7 +1476,7 @@ const GAME = {
   name: "Pack Stack",              // the working title: shown on the splash, the home sign, About, and the home-screen icon label
   logo: ["PACK", "STACK"],         // the wordmark, one word per line
   tagline: "Robot workshop puzzles",
-  version: "1.6.0",
+  version: "1.6.1",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "packstacksupport@gmail.com",  // the public support address (store page, About page, privacy policy)
   credits: [["Game design and direction", "Murfer"], ["Code and art", "Built with Claude"], ["Music", "Bouncy, Chill and Epic styles: written in code for this game. Lo-fi style: recorded tracks by HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
@@ -2920,7 +2932,7 @@ const Levels = (() => {
     const sweep = n => {
       const BARS = [[[0, 0]], [[0, 0], [0, 1]], [[0, 0], [1, 0]], [[0, 0], [0, 1], [0, 2]], [[0, 0], [1, 0], [2, 0]], [[0, 0], [0, 1], [1, 0], [1, 1]], [[0, 0], [0, 1], [0, 2], [0, 3]], [[0, 0], [1, 0], [2, 0], [3, 0]]], COLS = [6, 6, 6, 3, 3, 2, 3, 3];
       const nl = n <= 4 ? 2 : n <= 6 ? 3 : 4, shape0 = id < 80 ? 0 : n === 6 && R() < .4 ? 4 : Math.floor(R() * 4);   // bottom rows, top rows, left columns, right columns, or a cross
-      for (let attempt = 0; attempt < 60; attempt++) {
+      for (let attempt = 0; attempt < 400; attempt++) {
         const lines = [], cr = 2 + Math.floor(R() * 4), cc = 2 + Math.floor(R() * 4), shape = attempt < 40 ? shape0 : 0;
         if (shape === 4) lines.push([true, cr], [false, cc]); else for (let j = 0; j < nl; j++) lines.push([shape < 2, shape % 2 ? j : N - 1 - j]);
         const cellsOf = ([row, i]) => { const a = []; for (let j = 0; j < N; j++) a.push(row ? i * N + j : j * N + i); return a; };
@@ -2932,6 +2944,8 @@ const Levels = (() => {
           cells.forEach(i => used.add(i)); pieces.push({ k: BARS[si].map(q => q.slice()), c: COLS[si], cells, at: [r0, c0] }); break;
         }
         if (pieces.length !== n || lines.some(l => !cellsOf(l).some(i => used.has(i))) || region.size - used.size < (shape === 4 ? 3 : nl * 2)) continue;
+        // single squares make the puzzle trivial (each one just drops into a hole), so only a few are allowed: none in a 3-block puzzle, one in 4 to 7, two in 8 to 11, three in 12
+        if (id > 75 && attempt < 340 && pieces.filter(p => p.k.length === 1).length > Math.floor(n / 4)) continue;
         if (shape === 4) { const x = cr * N + cc, last = pieces.findIndex(p => p.cells.includes(x)); if (last < 0) continue; pieces.push(pieces.splice(last, 1)[0]); }   // the block on the crossing has to finish both lines at once
         region.forEach(i => { if (!used.has(i)) g[i] = gem(); });
         cfg.script = pieces.map(p => ({ k: p.k, c: p.c, at: p.at })); return;   // "at" is where the answer puts the block; hints use it
@@ -3694,31 +3708,35 @@ const GLX = (() => {
   function fit(w, h, d) { if (!ok) return; W = w; H = h; can.width = Math.round(w * d); can.height = Math.round(h * d); gl.viewport(0, 0, can.width, can.height); }
   function begin() { n = 0; }
   // one square: slot = which picture, (x, y) = its middle, w and h = its size, rot = turned by; colour 0..1; add = its light adds up; wh = how far towards pure white
+  // (written straight into the big number list, with nothing created on the way: a few hundred of these run every frame)
   function spr(s, x, y, w, h, rot, r, g, b, a, add, wh) {
-    if (s < 0 || n >= MAXS) return; const cs = rot ? Math.cos(rot) : 1, sn = rot ? Math.sin(rot) : 0, hw = w / 2, hh = h / 2, [ox, oy] = origin(s);
+    if (s < 0 || n >= MAXS) return; const cs = rot ? Math.cos(rot) : 1, sn = rot ? Math.sin(rot) : 0, hw = w / 2, hh = h / 2, ox = (s % COLS) * CELL, oy = Math.floor(s / COLS) * CELL;
     const u0 = (ox + PAD) / SIZE, v0 = (oy + PAD) / SIZE, u1 = (ox + CELL - PAD) / SIZE, v1 = (oy + CELL - PAD) / SIZE;
-    vert(x - hw * cs + hh * sn, y - hw * sn - hh * cs, u0, v0, x + hw * cs + hh * sn, y + hw * sn - hh * cs, u1, v0, x + hw * cs - hh * sn, y + hw * sn + hh * cs, u1, v1, x - hw * cs - hh * sn, y - hw * sn + hh * cs, u0, v1, r, g, b, a, add, wh);
+    quad(x - hw * cs + hh * sn, y - hw * sn - hh * cs, u0, v0, x + hw * cs + hh * sn, y + hw * sn - hh * cs, u1, v0, x + hw * cs - hh * sn, y + hw * sn + hh * cs, u1, v1, x - hw * cs - hh * sn, y - hw * sn + hh * cs, u0, v1, r * a, g * a, b * a, add ? 0 : a, wh || 0);
   }
   // a square that is not turned, showing only part of its picture (ua..ub across, 0..1): used for the bars of light and the screen flash
   function rect(s, x0, y0, x1, y1, ua, ub, r, g, b, a, add, turn) {
-    if (s < 0 || n >= MAXS || x1 <= x0 || y1 <= y0) return; const [ox, oy] = origin(s), m = s === 8 ? 24 : PAD;
-    const A = (ox + m + (CELL - 2 * m) * ua) / SIZE, Bq = (ox + m + (CELL - 2 * m) * ub) / SIZE, v0 = (oy + m) / SIZE, v1 = (oy + CELL - m) / SIZE;
-    if (turn) vert(x0, y0, A, v0, x1, y0, A, v1, x1, y1, Bq, v1, x0, y1, Bq, v0, r, g, b, a, add, 0);   // the picture runs down the screen instead of across
-    else vert(x0, y0, A, v0, x1, y0, Bq, v0, x1, y1, Bq, v1, x0, y1, A, v1, r, g, b, a, add, 0);
+    if (s < 0 || n >= MAXS || x1 <= x0 || y1 <= y0) return; const ox = (s % COLS) * CELL, oy = Math.floor(s / COLS) * CELL, m = s === 8 ? 24 : PAD;
+    const A = (ox + m + (CELL - 2 * m) * ua) / SIZE, Bq = (ox + m + (CELL - 2 * m) * ub) / SIZE, v0 = (oy + m) / SIZE, v1 = (oy + CELL - m) / SIZE, R = r * a, G = g * a, Bc = b * a, Al = add ? 0 : a;
+    if (turn) quad(x0, y0, A, v0, x1, y0, A, v1, x1, y1, Bq, v1, x0, y1, Bq, v0, R, G, Bc, Al, 0);   // the picture runs down the screen instead of across
+    else quad(x0, y0, A, v0, x1, y0, Bq, v0, x1, y1, Bq, v1, x0, y1, A, v1, R, G, Bc, Al, 0);
   }
-  function vert(ax, ay, au, av, bx, by, bu, bv, cx, cy, cu, cv, dx, dy, du, dv, r, g, b, a, add, wh) {
-    const R = r * a, G = g * a, Bc = b * a, Al = add ? 0 : a, w = wh || 0; let o = n * 6 * STRIDE;
-    const P = [ax, ay, au, av, bx, by, bu, bv, cx, cy, cu, cv, ax, ay, au, av, cx, cy, cu, cv, dx, dy, du, dv];
-    for (let k = 0; k < 24; k += 4) { V[o++] = P[k]; V[o++] = P[k + 1]; V[o++] = P[k + 2]; V[o++] = P[k + 3]; V[o++] = R; V[o++] = G; V[o++] = Bc; V[o++] = Al; V[o++] = w; }
-    n++;
+  function pt(o, x, y, u, v, R, G, Bc, Al, w) { V[o] = x; V[o + 1] = y; V[o + 2] = u; V[o + 3] = v; V[o + 4] = R; V[o + 5] = G; V[o + 6] = Bc; V[o + 7] = Al; V[o + 8] = w; }
+  function quad(ax, ay, au, av, bx, by, bu, bv, cx, cy, cu, cv, dx, dy, du, dv, R, G, Bc, Al, w) {
+    const o = n * 6 * STRIDE; n++;
+    pt(o, ax, ay, au, av, R, G, Bc, Al, w); pt(o + 9, bx, by, bu, bv, R, G, Bc, Al, w); pt(o + 18, cx, cy, cu, cv, R, G, Bc, Al, w);
+    pt(o + 27, ax, ay, au, av, R, G, Bc, Al, w); pt(o + 36, cx, cy, cu, cv, R, G, Bc, Al, w); pt(o + 45, dx, dy, du, dv, R, G, Bc, Al, w);
   }
+  // every gem and block picture goes onto the sheet ahead of time and the sheet is handed to the chip once, while nothing is happening
+  // (sending the sheet takes a moment, and it used to happen in the middle of the first clear of each kind of gem)
+  function warm() { if (!ok) return; try { Pics.src.forEach((_, name) => { if (/^--[gk]\d+$/.test(name)) slot(name); }); if (dirty) { gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlas); dirty = false; } } catch (_) {} }
   function end() {
     if (!ok) return;
     if (dirty) { gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlas); dirty = false; }
     gl.clear(gl.COLOR_BUFFER_BIT); if (!n) return;
     gl.uniform2f(uRes, W, H); gl.bufferData(gl.ARRAY_BUFFER, V.subarray(0, n * 6 * STRIDE), gl.DYNAMIC_DRAW); gl.drawArrays(gl.TRIANGLES, 0, n * 6);
   }
-  return { init, fit, begin, spr, rect, end, slot, on: () => ok, shapeIx: name => SHAPES.indexOf(name), changed(name) { const i = slots.get(name); if (i !== undefined && ag) put(name, i); }, info: () => ok ? (gl.getParameter(gl.VERSION) + "") : "off" };
+  return { init, fit, begin, spr, rect, end, slot, warm, on: () => ok, shapeIx: name => SHAPES.indexOf(name), changed(name) { const i = slots.get(name); if (i !== undefined && ag) put(name, i); }, info: () => ok ? (gl.getParameter(gl.VERSION) + "") : "off" };
 })();
 
 // ---- sparkle and shatter effects ----
@@ -3755,7 +3773,7 @@ const Fx = (() => {
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i];
         if (!pass) { p.t += dt; if (p.t >= p.life) { parts.splice(i, 1); if (p.done) p.done(); continue; } if (p.t >= 0) move(p, dt); }
-        if ((p.t >= 0 || p.k === 6) && (p.k === 1 || p.k === 2 || p.k === 5 || p.k === 7) === !!pass) { if (glOn) drawGl(p, lt); else if (p.k < 6) draw(p, lt); }
+        if ((p.t >= 0 || p.k === 6) && (p.k === 1 || p.k === 2 || p.k === 5 || p.k === 7 || p.k === 9) === !!pass) { if (glOn) drawGl(p, lt); else if (p.k < 6) draw(p, lt); }
       }
     }
     if (glOn) GLX.end(); else { g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; }
@@ -3815,6 +3833,7 @@ const Fx = (() => {
         const b0 = p.y + off * p.h, a0 = Math.max(p.y, b0), a1 = Math.min(p.y + p.h, b0 + p.h); if (p.t < .4) GLX.rect(BEAM, p.x, a0, p.x + p.w, a1, (a0 - b0) / p.h, (a1 - b0) / p.h, 1, 1, 1, 1, 0, 1);
         const cx = p.x + p.w / 2, cy = p.y + p.h / 2, th = p.w * .28 * sy; S(DOT, cx, cy, th + 26, p.h * sx * 1.1, 0, 1, .93, .67, .7 * fade, 1, 0); S(DISC, cx, cy, Math.max(1, th), p.h * sx, 0, 1, 1, 1, fade, 1, 0);
       }
+    } else if (p.k === 9) { const c = rgbOf(p.col), z = p.s * (1.2 + 1.2 * u); S(DOT, p.x, p.y, z, z, 0, c[0], c[1], c[2], .9 * (1 - u), 1, 0);
     } else if (p.k === 8) { const a = p.a * (1 - ease(u)); GLX.rect(PX, 0, 0, W, H, 0, 1, 1, .94, .75, a * .75, 0, 0); S(DOT, W / 2, H * .45, Math.max(W, H) * 1.5, Math.max(W, H) * 1.5, 0, 1, 1, 1, a * .6, 0, 0); }
   }
   return {
@@ -3842,6 +3861,9 @@ const Fx = (() => {
     // (graphics chip only) a cleared gem flashes white and shrinks; r = where the square is on screen, name = which picture, delay in seconds.
     // Says false when it cannot draw it, and the style sheet's own animation is used instead.
     gem(r, name, delay) { if (!glOn || reduced) return false; const sl = GLX.slot(name); if (sl < 0) return false; add({ k: 6, slot: sl, x: r.left + r.width / 2, y: r.top + r.height / 2, s: r.width * 1.12, life: .3, delay: delay || 0 }); return true; },
+    // (graphics chip only) a soft dot of light that swells and fades, such as the pack meter blinking as a spark lands
+    blink(x, y, size, col) { if (!glOn || reduced) return false; add({ k: 9, x, y, s: size, col, life: .22 }); return true; },
+    warm() { if (glOn) GLX.warm(); },
     // (graphics chip only) the bar of light along a cleared row or column
     beam(x, y, w, ht, row) { if (!glOn || reduced) return false; add({ k: 7, x, y, w, h: ht, row: !!row, life: .45 }); return true; },
     // a quick white flash over the whole screen
@@ -4410,6 +4432,7 @@ function pieceEl(p, size, gap) {
   return d;
 }
 function layout() {
+  geom = null;   // everything may have moved: the next move measures again
   const st = stageEl.getBoundingClientRect(); if (!st.width) return;
   const bs = Math.max(140, Math.floor(Math.min(st.width - 4, st.height - 12)));
   boardEl.style.setProperty("--bs", bs + "px"); boardEl.style.setProperty("--mc", ((bs - 16) / 8).toFixed(2) + "px");
@@ -4431,14 +4454,17 @@ function paint(g, placed, kd) {
   const r = S.run, k = kd || r.kind, f = r.lv && r.lv.fog;
   for (let i = 0; i < 64; i++) { const c = cells[i]; if (c.classList.contains("clr") && !(placed && placed.includes(i))) continue; setCell(c, g[i], k ? k[i] : 0, f && f[i] && !(placed && placed.includes(i))); }
   // restart the landing bounce: every class is taken off first, then ONE re-measure, then every class goes back on (not one re-measure per gem)
-  if (placed && placed.length) { placed.forEach(i => cells[i].classList.remove("clr", "pop")); void cells[placed[0]].offsetWidth; placed.forEach(i => cells[i].classList.add("pop")); }
+  if (placed && placed.length) {
+    if (!placed.some(i => cells[i].classList.contains("pop") || cells[i].classList.contains("clr"))) placed.forEach(i => cells[i].classList.add("pop"));
+    else Redo.push(() => placed.forEach(i => cells[i].classList.remove("clr", "pop")), () => placed.forEach(i => { if (!cells[i].classList.contains("clr")) cells[i].classList.add("pop"); }));
+  }
 }
 // gems in a cleared line flash white and burst into shards; pow makes a bigger burst for bigger clears
 function wipe(idxs, origin, pow) {
   let max = 0; const per = Math.max(3, Math.min(8, Math.round(72 / idxs.length * (pow || 1))));
   // three passes, so the browser re-measures the board ONCE per clear and not twice per gem: set every cell up, read every position, then start every burst
   const ds = idxs.map(ix => { const d = (Math.abs((ix >> 3) - (origin >> 3)) + Math.abs((ix & 7) - (origin & 7))) * 16, c = cells[ix]; if (d > max) max = d; c.style.setProperty("--d", d + "ms"); c.classList.remove("pop", "clr"); return d; });
-  const boxes = idxs.map(ix => cells[ix].getBoundingClientRect());
+  const boxes = idxs.map(cellBox);
   // with the graphics chip, it draws the gem flashing white and shrinking (class "glc" hides the page's own gem at once); otherwise the style sheet animates it
   idxs.forEach((ix, n) => { const c = cells[ix], col = +c.dataset.c, k = +c.dataset.k || 0; c.classList.toggle("glc", !!col && !c.dataset.f && Fx.gem(boxes[n], k >= 2 ? "--k" + k : "--g" + col, ds[n] / 1000)); c.classList.add("clr"); if (col) Fx.shatter(boxes[n], col, per, ds[n] / 1000 + .06); });
   setTimeout(() => idxs.forEach(ix => { const c = cells[ix]; if (!c.classList.contains("clr")) return; c.classList.remove("clr"); cellNow(ix); }), (reduced ? 0 : 340) + max);
@@ -4446,8 +4472,8 @@ function wipe(idxs, origin, pow) {
 // a bar of light sweeps along each cleared row and column
 function zap(rows, cols) {
   if (reduced || !(rows.length + cols.length)) return;
+  if (Fx.gl()) { const q = whereNow(), W = 7 * q.pitch + q.cell; rows.forEach(r => Fx.beam(q.ox, q.oy + r * q.pitch, W, q.cell, true)); cols.forEach(c => Fx.beam(q.ox + c * q.pitch, q.oy, q.cell, W, false)); return; }
   const a = cells[0], z = cells[63], x0 = a.offsetLeft, y0 = a.offsetTop, w = z.offsetLeft + z.offsetWidth - x0, ht = z.offsetTop + z.offsetHeight - y0;
-  if (Fx.gl()) { const A = a.getBoundingClientRect(), Z = z.getBoundingClientRect(), W = Z.right - A.left, Ht = Z.bottom - A.top; rows.forEach(r => Fx.beam(A.left, A.top + r * Ht / N, W, Ht / N, true)); cols.forEach(c => Fx.beam(A.left + c * W / N, A.top, W / N, Ht, false)); return; }
   const line = (k, row) => {
     const c = cells[row ? k * N : k], n = h("div", "sweep" + (row ? "" : " col"));
     n.style.cssText = row ? `left:${x0}px;top:${c.offsetTop}px;width:${w}px;height:${c.offsetHeight}px` : `left:${c.offsetLeft}px;top:${y0}px;width:${c.offsetWidth}px;height:${ht}px`;
@@ -4456,16 +4482,17 @@ function zap(rows, cols) {
   rows.forEach(r => line(r, true)); cols.forEach(c => line(c, false));
 }
 // sparks leave the broken gems and curve up into the pack meter, which blinks as each one lands
-const sip = () => again(meterEl, "sip");
+const sip = () => { if (Fx.gl()) { const q = whereNow(); Fx.blink(q.mx, q.my, 30, "#FFE894"); if (!meterEl.classList.contains("sip")) meterEl.classList.add("sip"); } else again(meterEl, "sip"); };   // the meter blinks as a spark lands: a dot of light from the graphics chip, or the page's own blink
 function sparksToMeter(idxs) {
   if (reduced || !idxs.length) return;
-  const m = meterEl.getBoundingClientRect(), fill = Math.max(.05, Math.min(1, S.meta.charge / COST)), tx = m.left + m.width / 2, ty = m.top + m.height / 2, step = Math.max(1, Math.round(idxs.length / 7));
-  for (let i = 0; i < idxs.length; i += step) { const r = cells[idxs[i]].getBoundingClientRect(); Fx.fly(r.left + r.width / 2, r.top + r.height / 2, tx, ty, 2, "#FFD35C", sip); }
+  const q = whereNow(), fill = Math.max(.05, Math.min(1, S.meta.charge / COST)), tx = q.mx, ty = q.my, step = Math.max(1, Math.round(idxs.length / 7));
+  for (let i = 0; i < idxs.length; i += step) { const r = cellBox(idxs[i]); Fx.fly(r.left + r.width / 2, r.top + r.height / 2, tx, ty, 2, "#FFD35C", sip); }
 }
 function floatText(txt, ix, cls) {
-  const a = cells[ix].getBoundingClientRect(), s = stageEl.getBoundingClientRect(), n = h("div", "ftxt" + (cls ? " " + cls : ""));
-  n.textContent = txt; n.style.top = Math.max(cls ? 68 : 30, a.top - s.top) + "px"; stageEl.appendChild(n);
-  const half = n.offsetWidth / 2 + 2; n.style.left = Math.max(half, Math.min(s.width - half, a.left - s.left + a.width / 2)) + "px";
+  const a = cellBox(ix), q = whereNow(), n = h("div", "ftxt" + (cls ? " " + cls : ""));
+  // its width is worked out from its length (near enough to keep it on screen), so the browser is not asked to measure it mid-move
+  const half = Math.min(q.sw / 2, String(txt).length * (cls ? 12.6 : 7.6) + 6);
+  n.textContent = txt; n.style.top = Math.max(cls ? 68 : 30, a.top - q.sy) + "px"; n.style.left = Math.max(half, Math.min(q.sw - half, a.left - q.sx + a.width / 2)) + "px"; stageEl.appendChild(n);
   setTimeout(() => n.remove(), 1000);
 }
 // which soft sound a button makes: Back and Close swoosh, the main button of a screen pops, everything else (tabs, switches, choices) ticks
@@ -4476,10 +4503,14 @@ function uiRole(b) {
   return b.matches(".btn.pri,.btn.hot,.btn.offer,.play,.starter,.rs-bot") ? "pop" : "tick";
 }
 function toast(msg) { document.querySelectorAll(".toast").forEach(t => t.remove()); const t = h("div", "toast"); t.setAttribute("role", "status"); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2500); }
-function again(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+// To play an animation again its class has to come off, the browser has to notice, and the class goes back on. "Noticing" is a full
+// re-style of the page, and a line clear restarted five or six animations, each with its own. Now every restart in one move shares ONE:
+// off() runs at once, and all the on() jobs run together right after the move's code has finished.
+const Redo = { q: [], armed: false, push(off, on) { off(); this.q.push(on); if (this.armed) return; this.armed = true; queueMicrotask(() => { this.armed = false; const q = this.q.splice(0); void boardEl.offsetWidth; q.forEach(f => { try { f(); } catch (_) {} }); }); } };
+function again(el, cls) { if (!el.classList.contains(cls)) { el.classList.add(cls); return; } Redo.push(() => el.classList.remove(cls), () => el.classList.add(cls)); }
 // the board's own effects (turn, shake, rise) play one at a time and take themselves off when done, so an old one never replays or hides a new one
 const BOARDFX = ["spin", "shake", "shake1", "lift"];
-function boardFx(cls) { boardEl.classList.remove(...BOARDFX); void boardEl.offsetWidth; boardEl.classList.add(cls); }
+function boardFx(cls) { if (!BOARDFX.some(c => boardEl.classList.contains(c))) { boardEl.classList.add(cls); return; } Redo.push(() => boardEl.classList.remove(...BOARDFX), () => boardEl.classList.add(cls)); }
 boardEl.addEventListener("animationend", e => { if (e.target === boardEl) boardEl.classList.remove(...BOARDFX); });
 
 function renderTray(dealt) {
@@ -4508,7 +4539,7 @@ function renderCrew() {
 function renderHud() {
   const r = S.run, m = S.meta, sc = $("score"), t = fmt(r.score);
   sc.classList.toggle("long", t.length >= 7 && t.length < 9); sc.classList.toggle("xl", t.length >= 9);
-  if (sc.textContent !== t) { sc.textContent = t; if (r.score) { sc.style.animation = "none"; void sc.offsetWidth; sc.style.animation = "bump .18s ease-out"; } }
+  if (sc.textContent !== t) { sc.textContent = t; if (r.score) { const nm = sc.dataset.b === "1" ? "bump2" : "bump"; sc.dataset.b = nm === "bump" ? "1" : "0"; sc.style.animation = nm + " .18s ease-out"; } }   // two names for the same bounce, used in turn: a new name restarts it without the browser having to re-measure
   $("best").textContent = r.lv ? (r.lv.sp ? "" : r.lv.id) : fmt(Math.max(m.best, r.score)); $("bestLbl").firstChild.nodeValue = r.lv ? (r.lv.sp === "daily" ? "Daily" : r.lv.sp === "event" ? "Event" : "Level ") : "Best ";
   const pct = Math.floor(m.charge / COST * 100);
   meterEl.style.setProperty("--p", pct + "%"); meterEl.classList.toggle("near", pct >= 80); meterEl.setAttribute("aria-valuenow", pct); $("meterTxt").textContent = "Next pack " + pct + "%";
@@ -4545,7 +4576,13 @@ function renderAll() {
 
 // ---- dragging blocks ----
 const LIFT = [0, .5, 2];   // Drag style setting: under the finger, slight lift (half a square), big lift (two squares)
-function measure() { const a = cells[0].getBoundingClientRect(), b = cells[1].getBoundingClientRect(); geom = { ox: a.left, oy: a.top, cell: a.width, pitch: b.left - a.left }; }
+function measure() { const a = cells[0].getBoundingClientRect(), b = cells[1].getBoundingClientRect(), st = stageEl.getBoundingClientRect(), m = meterEl.getBoundingClientRect(); geom = { ox: a.left, oy: a.top, cell: a.width, pitch: b.left - a.left, sx: st.left, sy: st.top, sw: st.width, mx: m.left + m.width / 2, my: m.top + m.height / 2, at: performance.now() }; }
+// Where things are on screen, WITHOUT asking the browser in the middle of a move. Asking ("measuring") right after the page has been changed
+// makes the browser stop and re-lay-out everything on the spot, and a line clear used to ask half a dozen times. The answer from the start of
+// the move (every drag and tap measures) is still right a moment later, so it is reused; only an old answer is measured again.
+function whereNow() { if (!geom || !geom.sw || performance.now() - geom.at > 2500) measure(); return geom; }
+function cellBox(ix) { const q = whereNow(); return { left: q.ox + (ix & 7) * q.pitch, top: q.oy + (ix >> 3) * q.pitch, width: q.cell, height: q.cell }; }
+window.addEventListener("resize", () => { geom = null; });
 // how many lines a block would clear at a spot (used to choose between two equally close spots)
 function linesAt(p, r, c) { const st = { grid: S.run.grid.slice(), kind: (S.run.lv ? S.run : Endless.ready(S.run)).kind.slice() }; return Camp.drop(st, p.k, r, c, p.c, Camp.newOut(), { mirror: S.run.lv ? LV.cfg.tw.mirror : false }); }
 function clearGhost() { ghosted.forEach(c => c.classList.remove("ghost", "wc")); ghosted = []; }
@@ -5097,7 +5134,7 @@ function goHub(tab) {
   view = null; openSheet(tab || "home"); feel(); AdService.warm();
 }
 function goPlay(m) {
-  AdService.hold(); screen = "play"; mode = m; document.body.dataset.scr = "play"; document.body.dataset.mode = m;
+  AdService.hold(); Fx.warm(); screen = "play"; mode = m; document.body.dataset.scr = "play"; document.body.dataset.mode = m;
   hubEl.hidden = true; appEl.hidden = false; clearTimeout(PK.t); PK.mode = "idle"; if (view === "album") Fresh.clear();
   view = null; sheetEl.hidden = true; sheetEl.classList.remove("docked"); sheetIn.textContent = "";
   S.run = m === "level" ? S.lrun : S.endless; Ui.set({ scr: m === "level" ? "hub" : "endless" });
@@ -5230,7 +5267,7 @@ function hubStart() {
   popEl.addEventListener("click", popClick);
   $("goals").addEventListener("click", showGoals);
   const brand = document.querySelector(".hubtop .brand"); if (brand) { brand.outerHTML = `<button class="me" id="meBtn" type="button"></button>`; $("meBtn").addEventListener("click", () => { if (view !== "profile") openSheet("profile"); }); }
-  Tiles.init(); setInterval(tickLevel, 100); hub3Start();
+  Tiles.init(); Fx.warm(); setInterval(tickLevel, 100); hub3Start();
   $("btnUndo").addEventListener("click", undoMove);
   if (Ui.get().scr === "endless") goPlay("endless"); else goHub("home");
 }
@@ -5805,8 +5842,10 @@ const LINES = {
 function chatter(kind) {
   const r = S.run, el = $("chat"), now = Date.now(); if (!S.meta.chat || !r || !r.crew.length || screen !== "play" || now - chatAt < 5000) return false;
   const e = r.crew[chatN++ % r.crew.length], c = CARD[e.id], line = (LINES[e.id] || ["Nice!", "Careful!"])[kind]; chatAt = now;
-  el.className = "chat " + (kind ? "panic" : "cheer"); el.innerHTML = `<span class="face">${bot(c)}</span><p><b>${c.name}</b>${esc(line)}</p>`; el.hidden = false; void el.offsetWidth; el.classList.add("in");
-  clearTimeout(chatter.t); chatter.t = setTimeout(() => { el.hidden = true; }, 2300);
+  // the bubble is built two frames later, not in the same instant as the line clear it reacts to (drawing the robot's face is slow work for
+  // that one busy frame), and it needs no re-measure: a hidden bubble plays its entrance by itself when it is shown
+  const say = () => { el.hidden = true; el.className = "chat " + (kind ? "panic" : "cheer") + " in"; el.innerHTML = `<span class="face">${bot(c)}</span><p><b>${c.name}</b>${esc(line)}</p>`; el.hidden = false; };
+  clearTimeout(chatter.t); requestAnimationFrame(() => requestAnimationFrame(() => { if (screen === "play") say(); })); chatter.t = setTimeout(() => { el.hidden = true; }, 2300);
   return true;
 }
 // ---- look and feel that follows the game: danger glow, music, world colours ----
@@ -6299,9 +6338,12 @@ const Scene = (() => {
   }
   const skyTop = (id, big) => { thumb(id, 2, big); return tops.get(id + (id === "workshop" ? 2 : "") + (big ? "B" : "")); };
   const PART = { dust: 12, spark: 12, snow: 14, bubble: 10, firefly: 9, twinkle: 12, rain: 14 };
+  // the size of the screen is read once and again when it changes, never in the middle of a move (asking the browser for it there makes it stop and re-lay-out the page first)
+  let vw = 0, vh = 0; window.addEventListener("resize", () => { vw = vh = 0; });
   function show(id, tod, level, dim) {
-    const W = Math.max(280, window.innerWidth), H = Math.max(360, window.innerHeight), k = [id, id === "workshop" ? tod : 0, W, H, id === "workshop" ? seasonFx : ""].join("|");
-    host.style.setProperty("--dim", (dim / 100).toFixed(2)); host.dataset.anim = level;
+    if (!vw || !vh) { vw = window.innerWidth; vh = window.innerHeight; }
+    const W = Math.max(280, vw), H = Math.max(360, vh), k = [id, id === "workshop" ? tod : 0, W, H, id === "workshop" ? seasonFx : ""].join("|");
+    const dm = (dim / 100).toFixed(2); if (host.dataset.dim !== dm) { host.dataset.dim = dm; host.style.setProperty("--dim", dm); } if (host.dataset.anim !== String(level)) host.dataset.anim = level;   // only touched when it changes: this runs after every move
     if (k === key && level === lvl) return; key = k; lvl = level;
     let p = cache.get(k); if (!p) { try { p = paint(id, W, H, tod, Math.min(window.devicePixelRatio || 1, 1.5)); } catch (e) { return; } cache.set(k, p); if (cache.size > 3) cache.delete(cache.keys().next().value); }
     host.textContent = ""; host.dataset.theme = id;
@@ -6420,11 +6462,13 @@ const Bots = (() => {
     const crew = play ? (S.run.crew || []).map(c => c.id).filter(id => m.cards[id] > 0) : [], n = !play || m.bots === 2 ? 0 : m.bots === 1 ? 2 : 4;
     const others = m.botsCrew ? [] : Core.ALL.map(c => c.id).filter(id => m.cards[id] > 0 && !crew.includes(id)), ids = [...crew, ...others].slice(0, n), k = ids.join() + "|" + m.bots;
     if (k !== gkey) { gkey = k; gb.textContent = ""; ids.forEach((id, i) => { const d = document.createElement("i"); d.className = "gbot"; d.style.cssText = `left:${[8, 78, 32, 56][i]}%;--d:-${i * 1.3}s`; d.appendChild(sprite(id, false, 88, true)); gb.appendChild(d); }); }
-    gb.classList.toggle("still", m.bots === 1 || Scene.level() > 0); place();
+    gb.classList.toggle("still", m.bots === 1 || Scene.level() > 0); if (!placed) place(); else { clearTimeout(placeT); placeT = setTimeout(place, 900); }   // measured when the screen is laid out and a moment AFTER a move, never in the middle of one
   }
+  let placed = false, placeT = 0;
   function place() {
     if (!gb || !boardEl.offsetWidth) return; const bs = boardEl.offsetWidth, sz = Math.max(28, Math.min(44, Math.round(bs * .125))), room = boardEl.offsetTop + 9;
-    gb.style.cssText = `left:${boardEl.offsetLeft}px;top:${boardEl.offsetTop}px;width:${bs}px;--sz:${sz}px;--peek:${Math.max(12, Math.min(Math.round(sz * .7), room))}px`;
+    const css = `left:${boardEl.offsetLeft}px;top:${boardEl.offsetTop}px;width:${bs}px;--sz:${sz}px;--peek:${Math.max(12, Math.min(Math.round(sz * .7), room))}px`; placed = true;
+    if (gb.style.cssText !== css && gb.dataset.css !== css) { gb.dataset.css = css; gb.style.cssText = css; }
   }
   function mood(kind) { if (!gb) return; clearTimeout(moodT); gb.classList.toggle("worry", kind === "worry"); if (kind === "cheer") { again(gb, "cheer"); moodT = setTimeout(() => gb.classList.remove("cheer"), 1200); } }
   document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".bbot"); if (b) tap(b); });
