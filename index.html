@@ -1355,6 +1355,9 @@ textarea.code[readonly]{font:600 11.5px/1.4 ui-monospace,Menlo,Consolas,monospac
 .sw-bot small{display:block;font-size:11px;font-weight:700;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sw-bot em{font-style:normal;font-weight:900;font-size:12px;white-space:nowrap}
 .sw-bot:active{transform:translateY(1px)}
+
+/* the Google Play app: no premium lane on the season track */
+.app .ptier{grid-template-columns:44px minmax(0,1fr)}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -1424,10 +1427,43 @@ const GAME = {
   name: "Pack Stack",              // the working title: shown on the splash, the home sign, About, and the home-screen icon label
   logo: ["PACK", "STACK"],         // the wordmark, one word per line
   tagline: "Robot workshop puzzles",
-  version: "1.5.0",
+  version: "1.5.1",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "support@example.com",  // placeholder: put your real support address here before publishing
   credits: [["Game design and direction", "Your name here"], ["Code and art", "Built with Claude"], ["Music", "Bouncy, Chill and Epic styles: written in code for this game. Lo-fi style: recorded tracks by HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
+};
+
+/* ---- native.js: the bridge to the Android app. ----
+   Inside the Google Play app, the Java side hands the page one object, window.PackStackNative, with two functions:
+     info()              -> a JSON string: { app: "android", ads: true|false, store: true|false, build: "12" }
+     call(id, op, arg)   -> starts a job. The app answers later by running  __psNative.done(id, ok, json)  in the page.
+   Jobs:  ads.show ("rewarded" | "inter") -> { shown, earned }        store.details (JSON list of ids) -> [{ itemId, priceText, price }]
+          store.buy (id) -> { itemId, purchaseToken, purchaseState }   store.list -> [{ itemId, purchaseToken, purchaseState }]
+          store.consume (token) -> {}
+   On the plain web page there is no such object: Native is null, APP is false and nothing in here does anything. */
+const Native = (() => {
+  const n = window.PackStackNative;
+  if (!n || typeof n.call !== "function") return null;
+  let seq = 0; const wait = {};
+  window.__psNative = {
+    done(id, ok, json) {
+      const w = wait[id]; if (!w) return; delete wait[id];
+      let v = null; try { v = typeof json === "string" && json ? JSON.parse(json) : json || null; } catch (_) {}
+      if (ok) w[0](v); else { const e = new Error(v && v.message || "the app could not do that"); if (v && v.name) e.name = String(v.name); w[1](e); }
+    }
+  };
+  const call = (op, arg) => new Promise((res, rej) => { const id = String(++seq); wait[id] = [res, rej]; try { n.call(id, op, arg == null ? "" : String(arg)); } catch (e) { delete wait[id]; rej(e); } });
+  let info = {}; try { info = JSON.parse(n.info()) || {}; } catch (_) {}
+  return { call, info, ads: !!info.ads, store: !!info.store };
+})();
+const APP = !!Native;
+if (APP) document.documentElement.classList.add("app");
+// Google Play Billing, in the shape the shop already speaks (see "the pack shop" in ui-b.js)
+if (Native && Native.store && !window.PackStackStore) window.PackStackStore = {
+  getDetails: ids => Native.call("store.details", JSON.stringify(ids || [])),
+  purchase: id => Native.call("store.buy", id),
+  listPurchases: () => Native.call("store.list"),
+  consume: token => Native.call("store.consume", token)
 };
 /*CORE-START*/
 const Core = (() => {
@@ -3984,6 +4020,9 @@ async function findStore() {
 }
 const Shop = {
   state: "closed",   // closed: no store here | wait: asking the store | open | none: nothing is on sale in this country
+  tried: 0,
+  // in the app the store can be out of reach for a moment (no internet at launch): opening a shop page asks again, at most every 15 seconds
+  retry() { if (APP && this.state === "closed" && !this.busy && Date.now() - this.tried > 15000) { this.tried = Date.now(); this.init(); } },
   store: null, items: {}, busy: false, note: "",
   set(s) { this.state = s; if (view === "shop") viewShop(); if (S.run && S.run.over && !S.run.lv) renderCont(); },
   // has the store really finished this purchase? (a store that says nothing about state only ever lists finished ones)
@@ -4700,7 +4739,8 @@ function viewShop() {
   const st = Shop.state, live = st === "open" && !Shop.busy, was = view === "shop" && $("sheetBody"), y = was ? was.scrollTop : 0;
   const count = RAR.map((_, r) => CARDS.filter(c => c.rar === r).length);
   const atLeast = r => ((1 - Core.ODDS.reduce((miss, w) => miss * (1 - w.slice(r).reduce((a, b) => a + b, 0) / 100), 1)) * 100).toFixed(1);
-  const ban = st === "closed" ? "The shop opens in the Google Play version of " + GAME.name + ". Nothing can be bought here." : st === "wait" ? "Opening the shop…" : st === "none" ? "Packs are not for sale in your country. Every robot can still be found by playing." : "";
+  Shop.retry();
+  const ban = st === "closed" ? (APP ? "The shop cannot reach Google Play right now. Check your connection and open this page again." : "The shop opens in the Google Play version of " + GAME.name + ". Nothing can be bought here.") : st === "wait" ? "Opening the shop…" : st === "none" ? "Packs are not for sale in your country. Every robot can still be found by playing." : "";
   const fan = [[[6, 0]], [[-8, -6], [10, 6]], [[-14, -11], [2, 0], [18, 11]]];
   const rows = st === "none" ? "" : Core.SHOP.filter(p => st !== "open" || Shop.items[p.id]).map((p, i) => {
     const price = esc(Shop.price(p)), each = esc(Shop.each(p));
@@ -4725,7 +4765,7 @@ function viewMenu() {
     `<section class="mn"><h3>Controls</h3><p class="note">Drag style: where a block sits while you drag it.</p>${seg("drag", ["Under finger", "Slight lift", "Big lift"], "Drag style")}<p class="note">Placement help: if you let go a little off, the block slides into the nearest free spot. The ghost always shows where it will land.</p>${seg("snap", ["Off", "Normal", "Generous"], "Placement help")}</section>` +
     lookSection() +
     `<section class="mn" id="mnAudio"><h3>Sound and haptics</h3><div class="sws">${sw("sound", "Sound")}</div>${slide("volS", "Sound effects volume")}<div class="sws">${sw("music", "Music")}</div>${slide("volM", "Music volume")}<p class="note">Music style: Bouncy is the game's own cheerful puzzle music, with a different tune for the menu and every world. Lo-fi is recorded tracks by HoliznaCC0. Chill and Epic are the game's quieter and bigger bands.</p>${seg("mus", ["Bouncy", "Lo-fi", "Chill", "Epic"], "Music style")}<p class="note" id="nowPlaying" aria-live="off"></p><div class="sws">${sw("vib", "Haptics (vibration)")}</div></section>` +
-    `<section class="mn"><h3>Comfort</h3><div class="sws">${sw("calm", "Reduced motion")}${sw("lefty", "Left-handed layout")}${sw("chat", "Robot chatter")}${sw("ads", "Offers and ad placeholders")}</div></section>` +
+    `<section class="mn"><h3>Comfort</h3><div class="sws">${sw("calm", "Reduced motion")}${sw("lefty", "Left-handed layout")}${sw("chat", "Robot chatter")}${sw("ads", APP ? "Ads and ad offers" : "Offers and ad placeholders")}</div></section>` +
     settingsExtra() +
     `<section class="mn"><h3>How to play</h3><ol class="how">${HOWTO.map(t => `<li>${t}</li>`).join("")}</ol></section>` +
     `<section class="mn"><h3>Your save</h3><p class="savedline" id="mnSaved" role="status"></p><div id="mnSaveErr"></div><p id="mnSave"></p><div class="row" id="mnSaveBtn"></div></section>` +
@@ -5375,7 +5415,17 @@ const AdService = {
   seen(place) { AdLog.add(place, "shown"); Analytics.track("ad_offered", { place }); },
   showRewarded(place) { AdLog.add(place, "taken"); Analytics.track("ad_accepted", { place }); return this.play(true).then(ok => { if (ok) { AdLog.add(place, "done"); Analytics.track("ad_finished", { place }); } return ok; }); },
   showInterstitial() { AdLog.add("between", "shown"); return this.play(false).then(() => { AdLog.add("between", "done"); }); },
+  // In the Google Play app a real ad plays (the app shows it over the game and answers when it has closed). If no ad is loaded,
+  // a rewarded offer says so and pays nothing; a break between levels is simply skipped.
+  async playNative(rewarded) {
+    this.open = true; let r = null;
+    try { r = await Native.call("ads.show", rewarded ? "rewarded" : "inter"); } catch (_) {}
+    this.open = false; resumed();
+    if (rewarded && !(r && r.shown)) toast("No ad is ready right now. Try again in a moment.");
+    return rewarded ? !!(r && r.shown && r.earned) : true;
+  },
   play(rewarded) {
+    if (APP && Native.ads) return this.playNative(rewarded);
     return new Promise(res => {
       const wall = h("div", "adwall"), self = this; let left = this.cfg.seconds, over = false;
       wall.setAttribute("role", "dialog"); wall.setAttribute("aria-label", "Ad placeholder");
@@ -5452,14 +5502,14 @@ function viewStore() {
     `<div class="shop-row"><span class="shop-art"><svg class="gi big" viewBox="0 0 24 24"><path d="M9 17h6M10 20.500h4M8.200 14a6 6 0 1 1 7.600 0c-.700.600-.800 1.500-.800 3H9c0-1.500-.100-2.400-.800-3z"/></svg></span><span class="shop-what"><b>3 hints</b><small>Kept until you use them</small></span><button class="btn pri coin" data-act="coinbuy" data-id="hints" type="button"${m.coins >= Core.PRICE.hints ? "" : ` aria-disabled="true"`}><i class="ico-coin"></i>${Core.PRICE.hints}</button></div>` +
     `<div class="shop-row" id="shopChg"><span class="shop-art"><i class="ico-chg big"></i></span><span class="shop-what"><b>${Core.CHG_BUY} charges</b><small>${Core.chgTotal(m) || m.crew.length ? "For your crew. You have " + Core.chgTotal(m) : "Find a robot first"}</small></span><button class="btn pri coin" data-act="chgbuy" type="button"${m.coins >= Core.PRICE.chg && Core.ALL.some(c => Core.active(c.id) && m.cards[c.id] > 0) ? "" : ` aria-disabled="true"`}><i class="ico-coin"></i>${Core.PRICE.chg}</button></div></div><p class="shop-note" id="coinNote" role="status"></p></section>`;
   if (on) {
-    html += `<section><h3>Offers<span>not on sale yet</span></h3><div class="shop-list">` +
+    if (!APP) html += `<section><h3>Offers<span>not on sale yet</span></h3><div class="shop-list">` +
       `<div class="shop-row best" data-offer="starter"><em class="ribbon">Best value</em>${foil(3, "big")}<span class="shop-what"><b>${esc(Live.offer("starter").title)}</b><small>${esc(Live.offer("starter").text)}</small><small class="was"><s>$${sum}</s> for the packs alone</small></span><button class="btn pri" data-act="soon" data-id="The Starter bundle" type="button">${esc(Live.offer("starter").price)}</button></div>` +
       `<div class="shop-row" data-offer="noads"><span class="shop-art"><i class="noads"></i></span><span class="shop-what"><b>${esc(Live.offer("noads").title)}</b><small>${esc(Live.offer("noads").text)}</small></span><button class="btn pri" data-act="soon" data-id="Remove ads" type="button">${esc(Live.offer("noads").price)}</button></div>` +
       `<div class="shop-row pass" data-offer="pass"><span class="shop-what"><b>${esc(Live.offer("pass").title)}</b><small>${esc(Live.offer("pass").text)}</small><span class="track" aria-label="Seven daily rewards: coins, shards, packs and an Epic robot on day 7">${Core.LOGIN.map((r, i) => `<i class="${i === 6 ? "top" : r.packs ? "tp" : r.coins ? "tc" : "ts"}">${r.rare ? "Epic" : r.packs ? "x2" : r.coins ? r.coins * 2 : r.shards * 2}</i>`).join("")}</span></span><button class="btn pri" data-act="soon" data-id="The Robot Pass" type="button">${esc(Live.offer("pass").price)}</button></div></div></section>`;
     html += `<section class="mn"><h3>Pack bundles</h3>${oddsTable()}<p class="note">Every pack holds 3 random robot cards, the same packs you earn by playing. ${PITYNOTE}</p><div class="shop-list bundles">` +
-      P.map((p, i) => `<div class="shop-row">${foil(i + 1)}<span class="shop-what"><b>${p.packs} ${p.packs === 1 ? "pack" : "packs"}</b><small>${p.packs * 3} robot cards</small></span><button class="btn pri" data-act="bundle" data-id="${p.id}" type="button" aria-label="${p.packs} ${p.packs === 1 ? "pack" : "packs"} for ${price(p)}">${price(p)}</button></div>`).join("") + `</div><p class="note">${Shop.state === "open" ? "Payments are handled by Google Play." : "Real purchases only open in the Google Play version. Here every price button just says Coming soon."}</p></section>`;
-  } else html += `<p class="note">Offers and ad placeholders are switched off in Settings, so only the coin shop shows here.</p>`;
-  html += `<section class="mn" id="stRestore"><h3>Already bought something?</h3><p class="note">Restore brings back one-time purchases on a new phone. Nothing is on sale in this version, so there is nothing to restore yet.</p><div class="row"><button class="btn" data-act="restore" type="button">Restore purchases</button><button class="btn" data-act="tab" data-id="odds" type="button">Pack odds</button></div></section>`;
+      P.map((p, i) => `<div class="shop-row">${foil(i + 1)}<span class="shop-what"><b>${p.packs} ${p.packs === 1 ? "pack" : "packs"}</b><small>${p.packs * 3} robot cards</small></span><button class="btn pri" data-act="bundle" data-id="${p.id}" type="button" aria-label="${p.packs} ${p.packs === 1 ? "pack" : "packs"} for ${price(p)}">${price(p)}</button></div>`).join("") + `</div><p class="note">${Shop.state === "open" ? "Payments are handled by Google Play." : APP ? "The shop could not reach Google Play just now. Check your connection and try again." : "Real purchases only open in the Google Play version. Here every price button just says Coming soon."}</p></section>`;
+  } else html += `<p class="note">${APP ? "Ad offers and the pack shop" : "Offers and ad placeholders"} are switched off in Settings, so only the coin shop shows here.</p>`;
+  html += `<section class="mn" id="stRestore"><h3>Already bought something?</h3><p class="note">${APP ? "Paid for packs or a Continue that never arrived? This asks Google Play again and hands over anything still waiting." : "Restore brings back one-time purchases on a new phone. Nothing is on sale in this version, so there is nothing to restore yet."}</p><div class="row"><button class="btn" data-act="restore" type="button">Restore purchases</button><button class="btn" data-act="tab" data-id="odds" type="button">Pack odds</button></div></section>`;
   sheetIn.innerHTML = html + `</div>`; sheetIn.querySelectorAll("[data-offer]").forEach(r => { if (!Live.offer(r.dataset.offer).on) r.remove(); }); $("sheetBody").scrollTop = y;
 }
 function storeAct(a, id, b) {
@@ -5469,7 +5519,7 @@ function storeAct(a, id, b) {
   else if (a === "coinbuy") { if (Core.buyCoins(m, id)) { Sfx.buy(); toast(id === "pack" ? "Pack bought. Open it in Packs." : "3 hints added."); } }
   else if (a === "chgbuy") { const got = Core.buyCharges(m); if (got) { Sfx.buy(); chgSay(got.reduce((s, x) => s + x[1], 0), "(" + chgNames(got) + ")"); } }
   else if (a === "soon") return comingSoon(id);
-  else if (a === "bundle") { if (Shop.state === "open") { Shop.note = ""; return openSheet("shop"); } const p = Core.SHOP.find(x => x.id === id); return comingSoon(p.packs === 1 ? "The single pack" : "The " + p.packs + "-pack bundle"); }
+  else if (a === "bundle") { if (Shop.state === "open") { Shop.note = ""; return openSheet("shop"); } if (APP) { Shop.retry(); return toast("The shop cannot reach Google Play right now. Check your connection."); } const p = Core.SHOP.find(x => x.id === id); return comingSoon(p.packs === 1 ? "The single pack" : "The " + p.packs + "-pack bundle"); }
   save(); renderHub(); viewStore();
 }
 
@@ -5491,7 +5541,7 @@ function viewDaily() {
   html += `<section><h3>Daily challenge<span>streak: ${streak} ${streak === 1 ? "day" : "days"}</span></h3><div class="dcard"><p><b>Today's puzzle:</b> ${esc(goalWords(dcfg))}${dcfg.boss ? ", boss rules" : ""}.</p><p class="note">Everyone gets the same board and the same blocks today. Win it for a bonus pack, 50 coins and 2 robot charges.</p><div class="row"><button class="btn ${done ? "" : "pri"}" data-act="daily-play" type="button">${done ? "Done today. Play again" : "Play today's puzzle"}</button></div></div></section>`;
   html += `<section><h3>Daily chest<span>${chest ? "ready" : "opened today"}</span></h3><div class="dcard chest"><i class="chestpic${chest ? "" : " open"}" aria-hidden="true"></i><div class="row">${chest ? `<button class="btn pri" data-act="chest" type="button">Open the chest</button>` + (AdService.ready() ? offerBtn("daily_chest", "Bigger prize", "Watch an ad: 3 times the coins") : "") : `<p class="note">Come back tomorrow for another one.</p>`}</div><p class="shop-note" id="chestNote" role="status"></p></div></section>`;
   html += `<section><h3>Weekly event<span>ends in ${dLeft}d ${hLeft}h</span></h3><div class="dcard event"><div class="card r${bot0.rar}${m.cards[bot0.id] ? "" : " dim"}">${cardInner(bot0.id, Math.max(1, m.cards[bot0.id] || 0))}</div><div><p><b>${esc(ecfg.boss)}</b> returns. ${esc(ecfg.rule)}</p><p class="note">${evDone ? "Cleared this week. Best score " + fmt(m.day.eb) + "." : "Win it this week to get " + bot0.name + ", a robot you cannot find in packs."}</p><div class="row"><button class="btn ${evDone ? "" : "pri"}" data-act="event-play" type="button">${evDone ? "Play again" : "Play the event"}</button></div></div></div></section>`;
-  html += `<section><h3>Best Endless scores this week<span>kept on ${Cloud.state === "on" ? "your account" : "this device"}</span></h3>${weekTop.length ? `<ol class="tops">${weekTop.slice(0, 5).map(t => `<li><b>${fmt(t[0])}</b><span>${t[1] === day ? "today" : day - t[1] + (day - t[1] === 1 ? " day ago" : " days ago")}</span></li>`).join("")}</ol>` : `<p class="note">No Endless runs yet this week.</p>`}<div class="row"><button class="btn" data-act="brag" data-id="${best}" type="button"${best ? "" : ` aria-disabled="true"`}>Beat my score</button></div><p class="shop-note" id="bragNote" role="status"></p><p class="note">These are your own scores. An online board shared with other players is not built yet.</p></section>`;
+  html += `<section><h3>Best Endless scores this week<span>kept on ${Cloud.state === "on" ? "your account" : "this device"}</span></h3>${weekTop.length ? `<ol class="tops">${weekTop.slice(0, 5).map(t => `<li><b>${fmt(t[0])}</b><span>${t[1] === day ? "today" : day - t[1] + (day - t[1] === 1 ? " day ago" : " days ago")}</span></li>`).join("")}</ol>` : `<p class="note">No Endless runs yet this week.</p>`}<div class="row"><button class="btn" data-act="brag" data-id="${best}" type="button"${best ? "" : ` aria-disabled="true"`}>Beat my score</button></div><p class="shop-note" id="bragNote" role="status"></p><p class="note">These are your own scores${APP ? "." : ". An online board shared with other players is not built yet."}</p></section>`;
   sheetIn.innerHTML = html + `</div>`; $("sheetBody").scrollTop = y;
 }
 function openChest(better) {
@@ -5858,13 +5908,14 @@ function contState(r) {
 }
 function renderCont() {
   const box = $("overCont"), r = S.run, st = contState(r); if (!box) return;
+  if (st === "closed") Shop.retry();
   if (!st || st === "used") { box.hidden = true; box.textContent = ""; box.dataset.st = st; return; }
   const price = esc(contPrice()), what = "Clears the board and keeps your score. Jammer blocks stay. Once per run.";
   let html = "";
   if (st === "noroom") html = `<p class="note" id="contNote" role="status">No Continue for this run: the jammer blocks have left too little room to keep playing. Nothing is charged.</p>`;
   else if (st === "paid") html = `<button class="btn pri cont" id="contBtn" data-act="cont-use" type="button"${EX.busy ? ` aria-disabled="true"` : ""}><b>Continue</b><small>Already paid for</small></button><p class="note" id="contNote" role="status">${esc(EX.note) || what}</p>`;
   else if (st === "buy") html = `<button class="btn pri cont" id="contBtn" data-act="cont-buy" type="button"${EX.busy ? ` aria-disabled="true"` : ""} aria-label="Continue for ${price}"><b>Continue</b><small>${price}</small></button><p class="note" id="contNote" role="status">${esc(EX.note) || what}</p>`;
-  else html = `<button class="btn cont off" id="contBtn" data-act="cont-closed" type="button" aria-disabled="true" aria-label="Continue for ${price}, not available here"><b>Continue</b><small>${price}</small></button><p class="note" id="contNote" role="status">${st === "wait" ? "Opening the shop…" : "Continue opens in the Google Play version of " + esc(GAME.name) + ". Nothing can be bought here."}</p>`;
+  else html = `<button class="btn cont off" id="contBtn" data-act="cont-closed" type="button" aria-disabled="true" aria-label="Continue for ${price}, not available here"><b>Continue</b><small>${price}</small></button><p class="note" id="contNote" role="status">${st === "wait" ? "Opening the shop…" : (APP ? "Continue cannot reach Google Play right now. Check your connection." : "Continue opens in the Google Play version of " + esc(GAME.name) + ". Nothing can be bought here.")}</p>`;
   if (box.dataset.st !== st && (st === "buy" || st === "paid")) { AdLog.add("continue", "shown"); Analytics.track("continue_offered", { paid: st === "paid" ? 1 : 0, score: r.score }); }
   box.dataset.st = st; box.innerHTML = html; box.hidden = false;
 }
@@ -6528,8 +6579,8 @@ function viewSeason() {
     const next = T.find(t => m.sp.pts < t[0]);
     html += `<section class="scard"><p>${esc(s.blurb)}</p><p class="note" id="seaLeft">Ends in ${left} ${left === 1 ? "day" : "days"} (${esc(s.to)}). This is the season's real end date.</p><div class="sp-pts"><b id="seaPts">${fmt(m.sp.pts)}</b><small>season points${next ? " · " + fmt(next[0] - m.sp.pts) + " to the next reward" : " · track complete"}</small></div><p class="note">Earn points by playing: stars, packs opened and daily wins.</p></section>` +
       (s.robot && Core.CARD[s.robot] ? `<section class="dcard event" id="seaRobot"><span class="card r${Core.CARD[s.robot].rar}${m.cards[s.robot] > 0 ? "" : " dim"}">${cardInner(s.robot, m.cards[s.robot] || 1)}</span><div><p><b>Limited robot: ${esc(Core.CARD[s.robot].name)}</b></p><p class="note">${m.cards[s.robot] > 0 ? "Already in your album." : "Only this season. Win it in the weekly event on the Daily tab. It is never in packs."}</p></div></section>` : "") +
-      `<section><h3>Reward track<span>free and premium</span></h3><ol class="ptrack" id="ptrack">` + T.map((t, i) => { const open = m.sp.pts >= t[0], got = !!(m.sp.got >> i & 1); return `<li class="ptier${open ? " open" : ""}${got ? " got" : ""}"><span class="pt-n"><b>${i + 1}</b><small>${fmt(t[0])}</small></span><span class="pt-free"><small>Free</small><b>${rewardWord(t[1])}</b>${got ? "<em>Collected</em>" : open ? `<button class="btn sm pri" data-act="pass-claim" data-id="${i}" type="button">Collect</button>` : ""}</span><span class="pt-prem"><small>Premium</small><b>${rewardWord(t[2])}</b><i class="lockico" role="img" aria-label="Locked"></i></span></li>`; }).join("") + `</ol>` +
-      `<div class="row"><button class="btn pri" data-act="soon" data-id="The premium pass" type="button">Premium pass ${esc(Live.cfg.pass.price)}</button></div><p class="note">Placeholder: the premium lane is shown so you can see the design. Nothing can be bought here.</p></section>`;
+      `<section><h3>Reward track<span>${APP ? "free" : "free and premium"}</span></h3><ol class="ptrack" id="ptrack">` + T.map((t, i) => { const open = m.sp.pts >= t[0], got = !!(m.sp.got >> i & 1); return `<li class="ptier${open ? " open" : ""}${got ? " got" : ""}"><span class="pt-n"><b>${i + 1}</b><small>${fmt(t[0])}</small></span><span class="pt-free"><small>Free</small><b>${rewardWord(t[1])}</b>${got ? "<em>Collected</em>" : open ? `<button class="btn sm pri" data-act="pass-claim" data-id="${i}" type="button">Collect</button>` : ""}</span>${APP ? "" : `<span class="pt-prem"><small>Premium</small><b>${rewardWord(t[2])}</b><i class="lockico" role="img" aria-label="Locked"></i></span>`}</li>`; }).join("") + `</ol>` +
+      (APP ? "" : `<div class="row"><button class="btn pri" data-act="soon" data-id="The premium pass" type="button">Premium pass ${esc(Live.cfg.pass.price)}</button></div><p class="note">Placeholder: the premium lane is shown so you can see the design. Nothing can be bought here.</p>`) + `</section>`;
   }
   sheetIn.innerHTML = html + `</div>`;
 }
@@ -6558,9 +6609,36 @@ const LEGAL = {
     ["Problem reports", "A report you write is saved on your device with the game version, the last few game events, and basic device details (browser type and screen size). It is only shared if you copy it and send it to us yourself."],
     ["Ads and age", "Ads here are placeholders. Our stance for a published version: non-personalised ads only, no ads on the first levels, rewarded ads are always optional, and child-directed ad settings where required."]]]
 };
+// The same three pages for the Google Play app, where real ads (Google AdMob) and real purchases (Google Play) are switched on.
+const LEGAL_APP = {
+  privacy: ["Privacy Policy", [
+    ["The short version", "The game keeps your progress on your phone and nowhere else. We run no servers and no accounts, so we never receive your name, email, contacts, photos or location. The app shows ads through Google AdMob and takes payments through Google Play. Those two Google services do handle some data, as described below."],
+    ["What the game stores on your phone", "Your progress (robots, stars, coins, settings and the player name you pick), three backup copies of it, the list of offers you were shown, and receipts (purchase tokens) for things you bought so they are never handed over twice. All of it stays on your phone. Erase everything in Settings, or uninstalling the app, deletes it."],
+    ["Ads", "Ads are shown by Google AdMob. To show ads, limit how often you see the same one, measure them and prevent fraud, Google may collect your device's advertising ID, IP address (which shows a rough location), device and app details, and how you interact with ads. Where the law asks for it, you are asked for your choice before any ad is loaded, and you can change it later under Settings, Privacy, Ad privacy choices. You can also reset or delete your advertising ID in your phone's Android settings. How Google uses this data: policies.google.com/technologies/partner-sites"],
+    ["Purchases", "Payments are handled entirely by Google Play. We never see your card or account details. The game only receives a purchase token that says the payment went through."],
+    ["Play stats", "Only if you say yes: simple counts of what happens in the game (levels started, won and lost, packs opened, offers shown, session length). They never leave your phone."],
+    ["Children", "The game is not directed at children under 13, and we do not knowingly collect personal information from them. Purchases sit behind Google Play's own parental controls."],
+    ["Your choices", "Switch ads and ad offers off or on in Settings. Switch play stats off. Change your ad privacy choices. Export your save as a code. Erase everything in Settings at any time."],
+    ["Changes to this policy", "If this policy changes, the new version appears here and on the game's web page, with a new date at the top."],
+    ["Contact", "Questions about this policy or your data: write to the address on the About page."]]],
+  terms: ["Terms of Use", [
+    ["The game", "The game is provided as is, for personal, non-commercial fun. We may change or stop features."],
+    ["Virtual items", "Coins, shards, packs, charges, Continues and robots are game items with no cash value. They cannot be sold or exchanged for money, and they live in the save on your phone: if you erase the save or lose the phone without exporting a save code, they are gone."],
+    ["Packs and odds", "Packs hold random robot cards. The exact odds, the bad-luck protection and the duplicate rules are published on the Pack odds page and above the prices in the shop. Paid packs and free packs are identical."],
+    ["Purchases", "Purchases are made through Google Play and its refund rules apply. Packs and Continues are used up when you get them. If a payment went through and something did not arrive, open the Store tab and tap Restore purchases."],
+    ["Ads", "The game shows ads. Watching a rewarded ad is always your choice."],
+    ["Fair use", "Do not cheat, tamper with saves or disrupt the game for others."],
+    ["Changes", "These terms may be updated. The date at the top of the page shows the latest version."]]],
+  data: ["How we use your data", [
+    ["On your phone only", "Save file, three rolling backups of it, your settings, the list of offers you were shown, purchase receipts and (only with your OK) play stats. All of it is erased by Erase everything in Settings."],
+    ["Never collected by us", "Real name, email, phone number, contacts, photos, microphone, precise location. We have no server to send them to."],
+    ["Collected by Google for ads", "Advertising ID, IP address and rough location, device and app details, ad views and taps. See the Privacy Policy for your choices."],
+    ["Collected by Google for purchases", "What you bought and your payment details, inside Google Play. The game only sees a purchase token."],
+    ["Problem reports", "A report you write is saved on your phone with the game version, the last few game events and basic device details (screen size and browser engine). It is only shared if you copy it and send it to us yourself."]]]
+};
 function viewLegal(id) {
-  const L = LEGAL[id] || LEGAL.privacy;
-  sheetIn.innerHTML = head(L[0]) + `<div class="sheet-body legal" id="sheetBody">${LEGALNOTE}<p class="note">Draft dated ${Live.cfg.updated}. ${esc(GAME.name)} version ${GAME.version}.</p>${L[1].map(([h, t]) => `<section class="mn"><h3>${h}</h3><p>${t}</p></section>`).join("")}</div>`;
+  const set = APP ? LEGAL_APP : LEGAL, L = set[id] || set.privacy;
+  sheetIn.innerHTML = head(L[0]) + `<div class="sheet-body legal" id="sheetBody">${APP ? "" : LEGALNOTE}<p class="note">${APP ? "Last updated" : "Draft dated"} ${Live.cfg.updated}. ${esc(GAME.name)} version ${GAME.version}.</p>${L[1].map(([h, t]) => `<section class="mn"><h3>${h}</h3><p>${t}</p></section>`).join("")}</div>`;
 }
 const RKEY = "packstack.reports";
 const Reports = { get() { try { const a = JSON.parse(localStorage.getItem(RKEY) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } }, add(r) { const a = this.get(); a.push(r); try { localStorage.setItem(RKEY, JSON.stringify(a.slice(-20))); return true; } catch (e) { return false; } } };
@@ -6644,7 +6722,7 @@ function settingsExtra() {
   const seg = (key, opts, label, cur) => `<div class="seg" role="radiogroup" aria-label="${label}">${opts.map((t, i) => `<button class="segb" data-act="num" data-id="${key}" data-v="${i}" type="button" role="radio" aria-checked="${cur === i}">${t}</button>`).join("")}</div>`;
   return `<section class="mn" id="mnAccess"><h3>Accessibility</h3><div class="sws">${sw("big", "Large text", !!m.big)}${sw("hc", "High contrast", !!m.hc)}</div><p class="note">Gems are told apart by shape as well as colour (seven different cuts), so nothing depends on colour alone. Left-handed layout and Reduced motion are just above.</p></section>` +
     `<section class="mn" id="mnPerf"><h3>Performance</h3><p class="note">Low-power mode turns effects down. Automatic does it only when the phone is struggling.</p>${seg("lowp", ["Automatic", "Always", "Never"], "Low-power mode", m.lowp)}<div class="sws" style="margin-top:8px">${sw("season", "Seasonal looks", !!m.season)}</div></section>` +
-    `<section class="mn" id="mnPrivacy"><h3>Privacy</h3><div class="sws">${sw("anOk", "Keep play stats on this phone", m.anOk === 1)}</div><p class="note">No name, contacts or location. Used to see which levels are too hard.</p><div class="row"><button class="btn" data-act="tab" data-id="legal-privacy" type="button">Privacy Policy</button><button class="btn" data-act="tab" data-id="legal-terms" type="button">Terms</button><button class="btn" data-act="tab" data-id="legal-data" type="button">Your data</button></div></section>` +
+    `<section class="mn" id="mnPrivacy"><h3>Privacy</h3><div class="sws">${sw("anOk", "Keep play stats on this phone", m.anOk === 1)}</div><p class="note">No name, contacts or location. Used to see which levels are too hard.</p><div class="row"><button class="btn" data-act="tab" data-id="legal-privacy" type="button">Privacy Policy</button><button class="btn" data-act="tab" data-id="legal-terms" type="button">Terms</button><button class="btn" data-act="tab" data-id="legal-data" type="button">Your data</button>${APP && Native.ads ? `<button class="btn" data-act="ad-privacy" type="button">Ad privacy choices</button>` : ""}</div></section>` +
     `<section class="mn" id="mnAbout"><h3>About<span>version ${GAME.version}</span></h3><div class="row"><button class="btn" data-act="tab" data-id="about" type="button">About and credits</button><button class="btn" data-act="tab" data-id="report" type="button">Report a problem</button><button class="btn" data-act="tab" data-id="odds" type="button">Pack odds</button></div></section>`;
 }
 function savedLine() { const el = $("mnSaved"); if (el) { el.textContent = Safe.line() + (Safe.ok ? ". " + Safe.count() + " of 3 backups kept." : ""); el.classList.toggle("bad", !Safe.ok); const r = $("mnSaveErr"); if (r) r.innerHTML = Safe.ok ? "" : stateCard("oops", "Save failed", "Your phone's storage is full or blocked, so progress is only in memory. Free some space, then try again. Keep this tab open.", ["save-retry", "Try again", 1]); } }
@@ -6664,6 +6742,7 @@ function polishAct(a, id, b) {
   else if (a === "avatar") { m.av = id; save(); renderMe(); viewProfile(); Sfx.pick(); }
   else if (a === "ver") { if (++devTaps >= 7) { devTaps = 0; if (Core.secret(m, "s:dev")) save(); openSheet("dev"); } else if (devTaps >= 4) toast(7 - devTaps + " more taps for the developer panel."); }
   else if (a === "copy-contact") copyText(GAME.contact, "Address copied.");
+  else if (a === "ad-privacy") Native.call("ads.privacy").then(r => { if (!(r && r.shown)) toast("There is nothing to choose in your region. Ads here do not need a consent choice."); }).catch(() => toast("Could not open the ad choices just now."));
   else if (a === "rep-kind") b.parentElement.querySelectorAll(".segb").forEach(x => x.setAttribute("aria-checked", x === b));
   else if (a === "rep-save") saveReport();
   else if (a === "rep-copy") copyText($("repCode").value, "Report copied. Paste it into an email.");
@@ -6672,7 +6751,7 @@ function polishAct(a, id, b) {
   else if (a === "dev-break") { try { localStorage.setItem(KEY, "{\"meta\":{\"cards\":{\"bolt\":3"); } catch (e) {} noSave = true; location.reload(); }
   else if (a === "an-toggle") { m.anOk = m.anOk === 1 ? 2 : 1; if (m.anOk !== 1) Analytics.clear(); save(); b.setAttribute("aria-checked", m.anOk === 1); b.lastElementChild.textContent = m.anOk === 1 ? "on" : "off"; }
   else if (a === "pass-claim") { const r = Season.claim(+id); if (r) { Sfx.buy(); Haptic.play("pack"); toast("Collected: " + rewardWord(r) + "."); save(); renderHub(); viewSeason(); } }
-  else if (a === "restore") toast("Nothing to restore here. In the app version this brings back things you paid for once, like Remove ads.");
+  else if (a === "restore") { if (!APP) toast("Nothing to restore here. In the app version this brings back things you paid for once, like Remove ads."); else if (Shop.store) Shop.restore().then(() => toast("Checked with Google Play. Anything still waiting has been handed over.")); else { Shop.retry(); toast("Cannot reach Google Play right now. Check your connection and try again."); } }
   else if (a === "save-retry") { save(); savedLine(); toast(Safe.ok ? "Saved." : "Still could not save."); }
   else if (a === "net-retry") { Live.load().then(() => { toast(Live.state === "live" ? "Back online." : online() ? "Still using the built-in settings." : "Still offline."); }); }
   else if (a === "go-code") { closePop(); goHub("menu"); setTimeout(() => { const b2 = document.querySelector('[data-act="import"]'); if (b2) { b2.scrollIntoView({ block: "center" }); b2.click(); } }, 60); }
