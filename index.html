@@ -1407,6 +1407,22 @@ body.lowfx.danger::after{animation:none;opacity:.7}
 .board{will-change:transform}
 .board.spin{animation:spin .45s cubic-bezier(.3,1.3,.5,1) 50ms backwards}
 .board.lift{animation:lift .35s ease-out 50ms backwards}
+/* a robot as a ready-made picture (see Bots.pic) fills its box just as the line drawing does */
+.botpic{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;-webkit-user-drag:none}
+/* in the app a card turns over flat: it squeezes to a line, swaps faces, and opens again. The 3-D turn made every card three separate
+   pictures for the graphics chip for as long as it was on screen, and a big pack opening shows two dozen cards at once. */
+.app .flip .card-in{transform:none;transform-style:flat;transition:none}
+.app .flip .card-front,.app .flip .card-back{backface-visibility:visible;-webkit-backface-visibility:visible}
+.app .flip .card-back{transform:none;transition:opacity 0s .2s}
+.app .flip .card-front{opacity:0;transition:opacity 0s .2s}
+.app .flip.shown .card-in{transform:none;animation:flip2d .4s ease-in-out}
+.app .flip.shown .card-front{opacity:1}
+.app .flip.shown .card-back{opacity:0}
+@keyframes flip2d{0%{transform:scaleX(1)}50%{transform:scaleX(.02)}100%{transform:scaleX(1)}}
+.app .flip.shown .card-front::after{animation-delay:.2s}
+/* the legendary shimmer is repainted by the page on every frame, so it rests while cards are coming out of a pack */
+.app .rv .card.r3 .card-front{animation:none}
+.pkopen .scene *{animation-play-state:paused!important}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -1476,7 +1492,7 @@ const GAME = {
   name: "Pack Stack",              // the working title: shown on the splash, the home sign, About, and the home-screen icon label
   logo: ["PACK", "STACK"],         // the wordmark, one word per line
   tagline: "Robot workshop puzzles",
-  version: "1.6.1",
+  version: "1.6.2",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "packstacksupport@gmail.com",  // the public support address (store page, About page, privacy policy)
   credits: [["Game design and direction", "Murfer"], ["Code and art", "Built with Claude"], ["Music", "Bouncy, Chill and Epic styles: written in code for this game. Lo-fi style: recorded tracks by HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
@@ -3657,7 +3673,7 @@ const Gems = (() => {
 // If the chip is not available (or only a slow software stand-in is), init() says no and the older canvas painter in Fx carries on.
 const GLX = (() => {
   const CELL = 128, COLS = 8, SIZE = CELL * COLS, PAD = 4, IN = CELL - 2 * PAD, MAXS = 1500, STRIDE = 9;
-  const SHAPES = ["dot", "disc", "tri", "hi", "star", "ring", "beam", "coin", "px"], TAU = Math.PI * 2;
+  const SHAPES = ["dot", "disc", "tri", "hi", "star", "ring", "beam", "coin", "px", "rays"], TAU = Math.PI * 2;
   let can = null, gl = null, prog = null, buf = null, tex = null, atlas = null, ag = null, uRes = null, W = 0, H = 0, n = 0, dirty = true, ok = false, onLost = null;
   const V = new Float32Array(MAXS * 6 * STRIDE), slots = new Map(); let next = 0;
   const VS = "attribute vec2 p;attribute vec2 t;attribute vec4 c;attribute float w;uniform vec2 res;varying vec2 vt;varying vec4 vc;varying float vw;void main(){vt=t;vc=c;vw=w;gl_Position=vec4(p.x/res.x*2.-1.,1.-p.y/res.y*2.,0.,1.);}";
@@ -3674,6 +3690,11 @@ const GLX = (() => {
     else if (name === "ring") { g.lineWidth = IN * .045; g.beginPath(); g.arc(c, c, IN / 2 - IN * .03, 0, TAU); g.stroke(); }
     else if (name === "beam") { const q = g.createLinearGradient(PAD, 0, PAD + IN, 0); q.addColorStop(0, "rgba(255,255,255,0)"); q.addColorStop(.42, "rgba(255,255,255,.9)"); q.addColorStop(.5, "#fff"); q.addColorStop(.58, "rgba(255,255,255,.9)"); q.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = q; g.fillRect(0, 0, CELL, CELL); }
     else if (name === "coin") { const o = (cx, cy, rx, ry, col) => { g.fillStyle = col; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, TAU); g.fill(); }; o(c, c + 7, IN / 2 - 4, IN / 2 - 8, "#8A5200"); o(c, c - 2, IN / 2 - 4, IN / 2 - 8, "#FFC83D"); o(c - IN * .12, c - IN * .16, IN * .18, IN * .14, "#FFF3B8"); }
+    else if (name === "rays") {   // eighteen thin wedges of light around an empty middle, fading out towards the rim
+      for (let k = 0; k < 18; k++) { const a = k * TAU / 18; g.beginPath(); g.moveTo(c, c); g.arc(c, c, IN / 2, a, a + TAU * 7 / 360); g.closePath(); g.fill(); }
+      const q = g.createRadialGradient(c, c, 0, c, c, IN / 2); q.addColorStop(0, "rgba(0,0,0,0)"); q.addColorStop(.3, "rgba(0,0,0,0)"); q.addColorStop(.46, "rgba(0,0,0,.85)"); q.addColorStop(1, "rgba(0,0,0,0)");
+      g.globalCompositeOperation = "destination-in"; g.fillStyle = q; g.fillRect(0, 0, CELL, CELL); g.globalCompositeOperation = "source-over";
+    }
     else g.fillRect(0, 0, CELL, CELL);
     g.restore();
   }
@@ -3773,7 +3794,7 @@ const Fx = (() => {
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i];
         if (!pass) { p.t += dt; if (p.t >= p.life) { parts.splice(i, 1); if (p.done) p.done(); continue; } if (p.t >= 0) move(p, dt); }
-        if ((p.t >= 0 || p.k === 6) && (p.k === 1 || p.k === 2 || p.k === 5 || p.k === 7 || p.k === 9) === !!pass) { if (glOn) drawGl(p, lt); else if (p.k < 6) draw(p, lt); }
+        if ((p.t >= 0 || p.k === 6) && (p.k === 1 || p.k === 2 || p.k === 5 || p.k === 7 || p.k === 9 || p.k === 10) === !!pass) { if (glOn) drawGl(p, lt); else if (p.k < 6) draw(p, lt); }
       }
     }
     if (glOn) GLX.end(); else { g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; }
@@ -3834,6 +3855,9 @@ const Fx = (() => {
         const cx = p.x + p.w / 2, cy = p.y + p.h / 2, th = p.w * .28 * sy; S(DOT, cx, cy, th + 26, p.h * sx * 1.1, 0, 1, .93, .67, .7 * fade, 1, 0); S(DISC, cx, cy, Math.max(1, th), p.h * sx, 0, 1, 1, 1, fade, 1, 0);
       }
     } else if (p.k === 9) { const c = rgbOf(p.col), z = p.s * (1.2 + 1.2 * u); S(DOT, p.x, p.y, z, z, 0, c[0], c[1], c[2], .9 * (1 - u), 1, 0);
+    } else if (p.k === 10) {   // rays of light turning behind a rare card (what the style sheet's "rays" does)
+      const c = rgbOf(p.col), k = Math.min(1, u / .18), al = u < .18 ? .85 * k : .85 * (1 - (u - .18) / .82), z = p.s * (u < .18 ? .4 + .6 * k : 1 + .1 * (u - .18) / .82), rot = (u < .18 ? 20 * k : 20 + 90 * (u - .18) / .82) * Math.PI / 180;
+      S(9, p.x, p.y, z, z, rot, c[0], c[1], c[2], al, 1, 0);
     } else if (p.k === 8) { const a = p.a * (1 - ease(u)); GLX.rect(PX, 0, 0, W, H, 0, 1, 1, .94, .75, a * .75, 0, 0); S(DOT, W / 2, H * .45, Math.max(W, H) * 1.5, Math.max(W, H) * 1.5, 0, 1, 1, 1, a * .6, 0, 0); }
   }
   return {
@@ -3864,6 +3888,8 @@ const Fx = (() => {
     // (graphics chip only) a soft dot of light that swells and fades, such as the pack meter blinking as a spark lands
     blink(x, y, size, col) { if (!glOn || reduced) return false; add({ k: 9, x, y, s: size, col, life: .22 }); return true; },
     warm() { if (glOn) GLX.warm(); },
+    // (graphics chip only) rays of light turning around a point for about two seconds, as behind a rare card
+    rays(x, y, size, col) { if (!glOn || reduced) return false; add({ k: 10, x, y, s: size, col, life: 1.9 }); return true; },
     // (graphics chip only) the bar of light along a cleared row or column
     beam(x, y, w, ht, row) { if (!glOn || reduced) return false; add({ k: 7, x, y, w, h: ht, row: !!row, life: .45 }); return true; },
     // a quick white flash over the whole screen
@@ -4419,7 +4445,7 @@ function bot(c) {
 const chgLabel = (id, lv) => (Core.active(id) && S.meta.cards[id] > 0 ? "x" + Core.charges(S.meta, id) : Core.active(id) ? "x" + Core.CHG_NEW : Core.useText(id, lv));
 function cardInner(id, count, flip) {
   const c = CARD[id], lv = Math.max(1, Core.level(count));
-  const front = `<span class="card-front"><span class="pane s${c.set}"><span class="rar">${RAR[c.rar]}</span><span class="lv">${"<i></i>".repeat(lv)}</span><span class="art">${bot(c)}</span><b class="nm">${c.name}</b><span class="pw">${POW[c.pow].s} <em>${chgLabel(id, lv)}</em></span></span></span>`;
+  const front = `<span class="card-front"><span class="pane s${c.set}"><span class="rar">${RAR[c.rar]}</span><span class="lv">${"<i></i>".repeat(lv)}</span><span class="art">${flip && Bots.pic(id) || bot(c)}</span><b class="nm">${c.name}</b><span class="pw">${POW[c.pow].s} <em>${chgLabel(id, lv)}</em></span></span></span>`;
   return flip ? `<span class="card-in">${front}<span class="card-back">PS</span></span>` : front;
 }
 const lockedInner = c => `<span class="card-front"><span class="pane"><span class="rar">${RAR[c.rar]}</span><span class="q">?</span></span></span>`;
@@ -4532,7 +4558,7 @@ function renderCrew() {
     const badge = passive ? `<span class="chg on">ON</span>` : jam ? `<span class="chg zero">OFF</span>` : `<span class="chg${out ? " zero" : ""}">x${left}</span>`;
     const cls = (armed && armed.i === i ? " armed" : "") + (out ? " spent" : " ready") + (!out && !passive && !auto && (help.includes(i) || r.stuck) ? " help" : "");
     const sub = jam && !passive ? "Jammed here" : out ? "Get more" : auto ? "Steps in by itself" : passive ? "Always on" : c.name;
-    html += `<button class="cslot${cls}" data-i="${i}" data-id="${e.id}" type="button" aria-label="${c.name}, ${pw.n}, ${passive ? "always on" : left + (left === 1 ? " charge" : " charges")}"><span class="face">${bot(c)}</span><span class="cm"><b>${pw.s}</b><small>${sub}</small></span>${badge}</button>`;
+    html += `<button class="cslot${cls}" data-i="${i}" data-id="${e.id}" type="button" aria-label="${c.name}, ${pw.n}, ${passive ? "always on" : left + (left === 1 ? " charge" : " charges")}"><span class="face">${Bots.pic(e.id) || bot(c)}</span><span class="cm"><b>${pw.s}</b><small>${sub}</small></span>${badge}</button>`;
   }
   crewEl.innerHTML = html;
 }
@@ -4791,7 +4817,7 @@ function openPack() {
   got.cards.forEach(c => { if (c.isNew) Fresh.add(c.id); });
   if (S.meta.tut < 2) S.meta.tut = 2;
   save(); PK.mode = "open"; PK.got = got;
-  const p = $("pack"); if (p) p.classList.add("rip");
+  const p = $("pack"); if (p) p.classList.add("rip"); pkBusy(true);
   Sfx.rip(); Haptic.play("pack"); $("pkSub").textContent = ""; Analytics.track("pack_opened", { rar: Math.max(...got.cards.map(c => CARD[c.id].rar)), fresh: got.cards.filter(c => c.isNew).length }); Season.earn(5); Safe.mark();
   // the pack shakes and glows, then bursts in a flash of light
   if (p && !reduced) { const b = p.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2; setTimeout(() => { if (PK.mode !== "open") return; Fx.flash(.6); Fx.burst(x, y, 26, ["#fff", "#FFE894", "#FF9AD0"], 430); Fx.ring(x, y, b.width, "#FFE894"); }, 300); }
@@ -4800,6 +4826,9 @@ function openPack() {
 // "Open all": every waiting pack at once. Each pack is still its own pack (it moves the pity counter, pays the crew its +1 charge and can
 // finish a set; a finished set's reward packs are opened too). The cards are then shown together, one tile per robot, best first.
 const OPENALL_MAX = 60;
+// while cards are coming out of a pack the drifting backdrop holds still (class "pkopen"), and lets go a few seconds later whatever happens
+let pkBusyT = 0;
+function pkBusy(on) { clearTimeout(pkBusyT); document.documentElement.classList.toggle("pkopen", !!on); if (on) pkBusyT = setTimeout(() => pkBusy(false), 9000); }
 function openAll() {
   const m = S.meta; if (PK.mode !== "idle" || Core.packsReady(m, Date.now()) < 1) return;
   const by = {}, sets = [], joined = []; let packs = 0, cards = 0, dust = 0, chg = 0, crewChg = 0, best = 0;
@@ -4818,7 +4847,7 @@ function openAll() {
   const list = Object.values(by).sort((a, b) => (b.isNew - a.isNew) || (CARD[b.id].rar - CARD[a.id].rar) || (b.n - a.n));
   const all = { list, packs, cards, sets, joined, dust, chg, crewChg, best };
   save(); Safe.mark(); PK.mode = "open"; PK.got = all;
-  const p = $("pack"); if (p) p.classList.add("rip");
+  const p = $("pack"); if (p) p.classList.add("rip"); pkBusy(true);
   Sfx.rip(); Haptic.play("pack"); $("pkSub").textContent = ""; $("pkLine").textContent = "Opening " + packs + (packs === 1 ? " pack" : " packs") + "…"; $("pkActs").innerHTML = "";
   if (p && !reduced) { const b = p.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2; setTimeout(() => { if (PK.mode !== "open") return; Fx.flash(.7); Fx.burst(x, y, 40, ["#fff", "#FFE894", "#FF9AD0"], 520); Fx.ring(x, y, b.width * 1.3, "#FFE894"); }, 300); }
   PK.t = setTimeout(() => revealAll(all), reduced ? 0 : 600);
@@ -4831,14 +4860,15 @@ function revealAll(all) {
   const nodes = [...stage.querySelectorAll(".rv")]; let k = 0;
   const flip = quiet => {
     const r = all.list[k], n = nodes[k]; k++;
+    const box = quiet || reduced ? null : n.firstElementChild.getBoundingClientRect();   // measured BEFORE this card is changed, while the page is still settled
     n.firstElementChild.classList.add("shown");
     n.lastElementChild.innerHTML = (r.isNew ? "New" : "×" + r.count) + (r.n > 1 ? `<small>${r.n} cards</small>` : "") + (r.lvUp ? `<small>Level ${r.lvUp}</small>` : "") + (r.chg ? `<small class="plus">+${r.chg} ${r.chg === 1 ? "charge" : "charges"}</small>` : "");
-    if (!quiet) { const rar = CARD[r.id].rar; if (rar >= 2 || k <= 3) Sfx.flip(rar); else Sfx.tick(false); if (rar >= 2) { Haptic.play("rare"); cardFx(n, rar); } }
+    if (!quiet) { const rar = CARD[r.id].rar; if (rar >= 2 || k <= 3) Sfx.flip(rar); else Sfx.tick(false); if (rar >= 2) { Haptic.play("rare"); cardFx(n, rar, box); } }
   };
   const gap = Math.max(70, Math.min(220, 2400 / nodes.length));   // the whole show takes about two to three seconds, however many cards
   const step = () => { if (PK.mode !== "open") return; flip(false); if (k < nodes.length) PK.t = setTimeout(step, gap); else PK.t = setTimeout(done, 450); };
   const done = () => {
-    if (PK.mode !== "open") return; PK.mode = "done"; stage.onclick = null;
+    if (PK.mode !== "open") return; PK.mode = "done"; stage.onclick = null; pkBusy(false);
     const fresh = all.list.filter(r => r.isNew), n = Core.packsReady(S.meta, Date.now()), notes = [];
     $("pkLine").textContent = all.packs + (all.packs === 1 ? " pack" : " packs") + " opened" + (fresh.length ? ": " + fresh.length + (fresh.length === 1 ? " new robot" : " new robots") : "");
     if (all.chg) { notes.push("You got +" + all.chg + (all.chg === 1 ? " charge" : " charges") + "!" + (all.crewChg ? " (+" + all.crewChg + " of them for your crew, 1 per robot for every pack.)" : "")); chgSay(all.chg); }
@@ -4855,12 +4885,14 @@ function revealAll(all) {
   PK.t = setTimeout(step, reduced ? 0 : 480);
 }
 // the show when a card turns over: sparkles for every card; a flash, light rays and a shower of gems and coins for the rarer ones
-function cardFx(n, rar) {
+function cardFx(n, rar, box) {
   if (reduced || !n) return;
-  const b = n.firstElementChild.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2, col = ["#DCE4F5", "#6FBBFF", "#C795FF", "#FFD35C"][rar];
+  const b = box || n.firstElementChild.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2, col = ["#DCE4F5", "#6FBBFF", "#C795FF", "#FFD35C"][rar];
   Fx.burst(x, y, 6 + rar * 6, ["#fff", col], 190 + rar * 70);
   if (!rar) return;
-  n.style.setProperty("--ray", col); n.classList.add("rays"); Fx.flash(.14 + rar * .14); Fx.ring(x, y, b.width * (.8 + rar * .2), col);
+  // the turning rays of light: drawn by the graphics chip when it is in use, otherwise by the page (class "rays")
+  if (!Fx.rays(x, y, b.width * 2.1, col)) { n.style.setProperty("--ray", col); n.classList.add("rays"); }
+  Fx.flash(.14 + rar * .14); Fx.ring(x, y, b.width * (.8 + rar * .2), col);
   const gems = [0, 6, 12, 14][rar], coins = [0, 0, 8, 24][rar];
   Fx.shower(gems, "gem"); if (coins) Fx.shower(coins, "coin"); Sfx.coins(gems + coins);
 }
@@ -4872,14 +4904,15 @@ function reveal(got) {
   const nodes = [...stage.querySelectorAll(".rv")]; let k = 0;
   const flip = quiet => {
     const r = got.cards[k], n = nodes[k]; k++;
+    const box = quiet || reduced ? null : n.firstElementChild.getBoundingClientRect();
     n.firstElementChild.classList.add("shown");
     const tag = n.lastElementChild; tag.className = "rv-tag" + (r.isNew ? " new" : "");
     tag.innerHTML = (r.isNew ? "New" : "×" + r.count) + (r.lvUp ? `<small>Level ${r.lvUp}</small>` : "") + (r.chg ? `<small class="plus">+${r.chg} ${r.chg === 1 ? "charge" : "charges"}</small>` : "");
-    if (!quiet) { const rar = CARD[r.id].rar; Sfx.flip(rar); Haptic.play(rar > 1 ? "rare" : rar ? "pack" : "tap"); cardFx(n, rar); }
+    if (!quiet) { const rar = CARD[r.id].rar; Sfx.flip(rar); Haptic.play(rar > 1 ? "rare" : rar ? "pack" : "tap"); cardFx(n, rar, box); }
   };
   const step = () => { if (PK.mode !== "open") return; flip(false); if (k < nodes.length) PK.t = setTimeout(step, k === nodes.length - 1 ? 950 : 600); else PK.t = setTimeout(done, 500); };
   const done = () => {
-    if (PK.mode !== "open") return; PK.mode = "done"; stage.onclick = null;
+    if (PK.mode !== "open") return; PK.mode = "done"; stage.onclick = null; pkBusy(false);
     const fresh = got.cards.filter(c => c.isNew).length, n = Core.packsReady(S.meta, Date.now()), notes = [];
     $("pkLine").textContent = fresh ? (fresh === 1 ? "1 new robot" : fresh + " new robots") : "All repeats this time";
     if (!fresh) notes.push("Repeats level your robots up: 3 copies for Level 2, 6 for Level 3.");
@@ -5267,7 +5300,7 @@ function hubStart() {
   popEl.addEventListener("click", popClick);
   $("goals").addEventListener("click", showGoals);
   const brand = document.querySelector(".hubtop .brand"); if (brand) { brand.outerHTML = `<button class="me" id="meBtn" type="button"></button>`; $("meBtn").addEventListener("click", () => { if (view !== "profile") openSheet("profile"); }); }
-  Tiles.init(); Fx.warm(); setInterval(tickLevel, 100); hub3Start();
+  Tiles.init(); Fx.warm(); Bots.warmPics(); setInterval(tickLevel, 100); hub3Start();
   $("btnUndo").addEventListener("click", undoMove);
   if (Ui.get().scr === "endless") goPlay("endless"); else goHub("home");
 }
@@ -5842,10 +5875,10 @@ const LINES = {
 function chatter(kind) {
   const r = S.run, el = $("chat"), now = Date.now(); if (!S.meta.chat || !r || !r.crew.length || screen !== "play" || now - chatAt < 5000) return false;
   const e = r.crew[chatN++ % r.crew.length], c = CARD[e.id], line = (LINES[e.id] || ["Nice!", "Careful!"])[kind]; chatAt = now;
-  // the bubble is built two frames later, not in the same instant as the line clear it reacts to (drawing the robot's face is slow work for
+  // the bubble is built a twentieth of a second later, not in the same instant as the line clear it reacts to (drawing the robot's face is slow work for
   // that one busy frame), and it needs no re-measure: a hidden bubble plays its entrance by itself when it is shown
-  const say = () => { el.hidden = true; el.className = "chat " + (kind ? "panic" : "cheer") + " in"; el.innerHTML = `<span class="face">${bot(c)}</span><p><b>${c.name}</b>${esc(line)}</p>`; el.hidden = false; };
-  clearTimeout(chatter.t); requestAnimationFrame(() => requestAnimationFrame(() => { if (screen === "play") say(); })); chatter.t = setTimeout(() => { el.hidden = true; }, 2300);
+  const say = () => { el.hidden = true; el.className = "chat " + (kind ? "panic" : "cheer") + " in"; el.innerHTML = `<span class="face">${Bots.pic(c.id) || bot(c)}</span><p><b>${c.name}</b>${esc(line)}</p>`; el.hidden = false; };
+  clearTimeout(chatter.t); clearTimeout(chatter.s); chatter.s = setTimeout(() => { if (screen === "play") say(); }, 50); chatter.t = setTimeout(() => { el.hidden = true; }, 2300);
   return true;
 }
 // ---- look and feel that follows the game: danger glow, music, world colours ----
@@ -6383,6 +6416,27 @@ const Scene = (() => {
    Each robot is drawn once into its own small canvas (a sprite). Robots you have not found yet are dark shapes. */
 const Bots = (() => {
   const DEFS_IN = (DEFS.match(/<defs>[\s\S]*<\/defs>/) || [""])[0], pics = new Map();
+  // A robot drawn as lines and gradients has to be worked out again every time it is painted, and a pack opening paints two dozen of them
+  // while they fly and flip. So each robot is also kept as a ready-made picture (drawn once, a moment after the game starts, a few at a time),
+  // and the small places that show robots while things move (cards coming out of a pack, the crew row, the chat bubble) use that picture.
+  const pix = new Map(), pixBusy = new Set(), PIX = 256; let pixQ = [], pixT = 0;
+  function pixMake(id) {
+    if (pix.has(id) || pixBusy.has(id) || !Core.CARD[id]) return; pixBusy.add(id);
+    const fail = () => pixBusy.delete(id);
+    try {
+      const im = new Image(); im.onerror = fail;
+      im.onload = () => { try {
+        const cv = document.createElement("canvas"); cv.width = cv.height = PIX; cv.getContext("2d").drawImage(im, 0, 0, PIX, PIX);
+        const keep = u => { pixBusy.delete(id); if (!u) return; const held = new Image(); held.src = u; if (held.decode) held.decode().catch(() => {}); pix.set(id, { url: u, held }); };   // holding the loaded picture keeps it ready to show at once
+        if (cv.toBlob && Pics.ok) cv.toBlob(b => keep(b ? URL.createObjectURL(b) : ""), "image/png"); else keep(cv.toDataURL("image/png"));
+      } catch (e) { fail(); } };
+      im.src = "data:image/svg+xml," + encodeURIComponent(bot(Core.CARD[id]).replace("<svg ", `<svg xmlns="http://www.w3.org/2000/svg" width="${PIX}" height="${PIX}" `).replace(">", ">" + DEFS_IN));
+    } catch (e) { fail(); }
+  }
+  // the ready-made picture of a robot as page code, or "" while it is not drawn yet (the caller then uses the line drawing)
+  function pic(id) { const p = pix.get(id); if (!p) { pixMake(id); return ""; } return `<img class="botpic" src="${p.url}" alt="" draggable="false">`; }
+  // draw them all in the background, two at a time, and never while a level or a run is being played
+  function warmPics() { if (pixT) return; pixQ = Core.CARDS.map(c => c.id).filter(id => !pix.has(id)); const go = () => { pixT = 0; if (!pixQ.length) return; if (typeof screen === "undefined" || screen !== "play") { pixMake(pixQ.shift()); if (pixQ.length) pixMake(pixQ.shift()); } pixT = setTimeout(go, 120); }; pixT = setTimeout(go, 1500); }
   function sprite(id, dark, px, dim) {
     const cv = document.createElement("canvas"); cv.width = cv.height = px || 112; cv.className = "bb-r";
     const draw = im => { try {
@@ -6472,7 +6526,7 @@ const Bots = (() => {
   }
   function mood(kind) { if (!gb) return; clearTimeout(moodT); gb.classList.toggle("worry", kind === "worry"); if (kind === "cheer") { again(gb, "cheer"); moodT = setTimeout(() => gb.classList.remove("cheer"), 1200); } }
   document.addEventListener("click", e => { const b = e.target.closest && e.target.closest(".bbot"); if (b) tap(b); });
-  return { menu, game, place, mood, sprite, ACT, state: () => ({ menu: document.querySelectorAll(".bbot").length, dark: document.querySelectorAll(".bbot.dark").length, game: gb ? gb.children.length : 0, mood: gb ? gb.className : "" }) };
+  return { menu, game, place, mood, sprite, pic, warmPics, pixCount: () => pix.size, ACT, state: () => ({ menu: document.querySelectorAll(".bbot").length, dark: document.querySelectorAll(".bbot.dark").length, game: gb ? gb.children.length : 0, mood: gb ? gb.className : "" }) };
 })();
 
 /* ---- the home screen: the workshop scene with a hanging sign, the big PLAY button and the robots at work ---- */
