@@ -66,6 +66,13 @@ All payments go through one module: **`Shop`** (in `src/ui-b.js`), which talks t
 On Android, supply that object as `window.PackStackStore` from the app (Google Play Billing). On iPhone, write the same four functions on top of StoreKit (for example with `@capgo/capacitor-purchases` or RevenueCat). The game already handles failed payments, backing out, and packs that were paid for but not yet delivered.
 
 - Product ids and pack sizes come from `live.json` under `shop.packs`. They must match the ids you create in the stores.
+- **The Endless Continue** (new in 1.5) is one more consumable product: id `continue_1`, shown as $1.99 until the store gives its own price. After a lost Endless run it clears the board (jammer blocks stay), keeps the score, and works once per run. Its id, fallback price and an on/off switch are in `live.json` under `shop.cont` (`{ "id": "continue_1", "usd": 1.99, "on": true }`). Create a consumable in-app product with that id in the Play Console.
+  - It goes through the same four functions as the packs: `getDetails` is asked about it together with the packs, `purchase("continue_1")` takes the payment, `consume(token)` is called once it has been handed over.
+  - The game only acts on a purchase token the store returned. Each token is remembered (as a fingerprint) and never pays out twice.
+  - If the app is closed in the middle of paying, `listPurchases()` hands the purchase back at the next start. It is then used on the lost run if that run is still waiting, or kept in the save for the next lost run ("Continue, already paid for").
+  - `purchase()` and `listPurchases()` may add `purchaseState` to what they return. Anything other than `"purchased"` (or `1`, Google's number for it) is treated as not paid: pending, cancelled and refunded purchases hand over nothing. A store that leaves `purchaseState` out must only ever return finished purchases.
+  - What the game cannot do by itself: take a Continue back after Google refunds it later. That needs a server that listens to Google's refund notices. Until then a refund after use is simply a free Continue for that player.
+  - With no store object (the plain web page, the test APK) the button is shown switched off and nothing can be bought.
 - The Store tab's **Restore purchases** button is a placeholder. Wire it to the store's restore call for one-time purchases such as Remove ads.
 - The Starter bundle, Remove ads, Robot Pass and Premium pass are designs only. Decide which ones you will really sell.
 

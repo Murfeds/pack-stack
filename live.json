@@ -1,7 +1,7 @@
 {
  "_readme": "Live config for Pack Stack. Edit and re-upload this file to change events, offers, shop contents, daily/weekly levels, ad pacing, seasons and the season pass WITHOUT rebuilding the game. Raise \"version\" every time you change it. Anything malformed is ignored and the built-in value is used instead.",
  "version": 2,
- "updated": "2026-11-12",
+ "updated": "2026-11-14",
  "daily": {
   "pool": [
    16,
@@ -46,6 +46,11 @@
   "coins": {
    "pack": 300,
    "hints": 60
+  },
+  "cont": {
+   "id": "continue_1",
+   "usd": 1.99,
+   "on": true
   }
  },
  "offers": [

@@ -1331,6 +1331,30 @@ textarea.code[readonly]{font:600 11.5px/1.4 ui-monospace,Menlo,Consolas,monospac
 .wmore{position:absolute;left:0;right:0;top:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0 16px;background:var(--tx-stone,none),linear-gradient(180deg,#0E1828,#1B2C45);box-shadow:inset 0 -3px 0 rgba(255,236,170,.5);text-align:center}
 .wmore b{padding:6px 22px 7px;background:var(--tx-metal,none),var(--brass);color:var(--ink-d);font:400 15px/1 var(--font-display);clip-path:polygon(0 0,100% 0,calc(100% - 9px) 50%,100% 100%,0 100%,9px 50%);filter:drop-shadow(0 2px 0 rgba(7,12,22,.85))}
 .wmore small{font:600 11.5px/1.25 var(--font-ui);color:#C6D2E4}
+
+/* ---- v1.5: Endless extras ---- */
+.over-cont{display:grid;gap:6px;justify-items:center;margin:10px 0 4px}
+.over-cont .note{margin:0;max-width:32ch;text-wrap:balance}
+.over-cont .note.flash{animation:flash .5s}
+.btn.cont{flex-direction:column;gap:0;min-width:min(220px,100%);min-height:54px;padding:6px 20px;line-height:1.15}
+.btn.cont b{font-size:19px;letter-spacing:.3px}
+.btn.cont small{font-size:13px;font-weight:800;letter-spacing:0;opacity:.92}
+.btn.cont.off{filter:saturate(.3) brightness(.8)}
+.panel.tip.etip{text-align:center}
+.etip-pic{display:block;width:72px;height:72px;margin:0 auto 6px;background:center/contain no-repeat}
+/* album: swap a robot into a full crew */
+.dt-swap{grid-column:1/-1;display:grid;gap:6px}
+.al-detail.picking .dt-chg,.al-detail.picking .dt-body .note{display:none}
+.al-detail.picking{grid-template-columns:76px 1fr}
+.dt-swap>p{margin:0;font-weight:800}
+.sw-list{display:grid;gap:6px}
+.sw-bot{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:8px;min-height:50px;padding:5px 10px;border-radius:12px;border:2px solid rgba(255,255,255,.28);background:rgba(12,8,48,.45);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.sw-bot .face{width:40px;height:40px}
+.sw-bot .face svg{width:100%;height:100%;display:block}
+.sw-bot b{display:block;font-size:14px;line-height:1.15}
+.sw-bot small{display:block;font-size:11px;font-weight:700;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw-bot em{font-style:normal;font-weight:900;font-size:12px;white-space:nowrap}
+.sw-bot:active{transform:translateY(1px)}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -1368,6 +1392,7 @@ textarea.code[readonly]{font:600 11.5px/1.4 ui-monospace,Menlo,Consolas,monospac
     <h2>Out of moves</h2>
     <p class="big" id="overScore">0</p>
     <p class="note" id="overNote"></p>
+    <div class="over-cont" id="overCont" hidden></div>
     <div class="row">
       <button class="btn pri" id="overPacks" type="button">Open packs</button>
       <button class="btn" id="overAgain" type="button">Play again</button>
@@ -1399,7 +1424,7 @@ const GAME = {
   name: "Pack Stack",              // the working title: shown on the splash, the home sign, About, and the home-screen icon label
   logo: ["PACK", "STACK"],         // the wordmark, one word per line
   tagline: "Robot workshop puzzles",
-  version: "1.4.0",
+  version: "1.5.0",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "support@example.com",  // placeholder: put your real support address here before publishing
   credits: [["Game design and direction", "Your name here"], ["Code and art", "Built with Claude"], ["Music", "Bouncy, Chill and Epic styles: written in code for this game. Lo-fi style: recorded tracks by HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
@@ -1412,6 +1437,8 @@ const Core = (() => {
   // Packs sold in the store version. Each id must match an in-app product made in the Google Play Console. The real price is
   // whatever is set there; usd is only what the closed shop shows.
   const SHOP = [{ id: "packs_1", packs: 1, usd: .49 }, { id: "packs_5", packs: 5, usd: 1.99 }, { id: "packs_10", packs: 10, usd: 3.49 }];
+  // The paid Continue: after an Endless run is lost, clear the board and play on (see Camp.Endless.cont). One product, bought one at a time.
+  const CONT = { id: "continue_1", usd: 1.99, on: true };
   const RAR = ["Common", "Rare", "Epic", "Legend"];
   // Pity: after PITY packs in a row with no Epic or Legend, the next pack's third card is drawn from PITY_ODDS.
   const PITY = 8, PITY_ODDS = [0, 0, 80, 20];
@@ -1561,11 +1588,12 @@ const Core = (() => {
     for (let i = 0; i < SHAPES.length; i++) { x -= ws[i]; if (x <= 0) return mk(SHAPES[i]); }
     return mk(SHAPES[0]);
   }
-  function deal(g, score, rand = Math.random) {
+  // ok = a stricter "can these three all be placed?" check (Endless boards that hold ice, rock or jammer blocks pass their own)
+  function deal(g, score, rand = Math.random, ok) {
     let fill = 0; for (let i = 0; i < NN; i++) if (g[i]) fill++; fill /= NN;
     const three = () => [pick(score, fill, rand), pick(score, fill, rand), pick(score, fill, rand)];
     const tries = Math.max(3, 14 - Math.floor(score / 400)); let fb = null;
-    for (let t = 0; t < tries; t++) { const trio = three(); if (solvable(g, trio)) return trio; if (!fb && trio.some(p => anyFit(g, p.k))) fb = trio; }
+    for (let t = 0; t < tries; t++) { const trio = three(); if (ok ? ok(trio) : solvable(g, trio)) return trio; if (!fb && trio.some(p => anyFit(g, p.k))) fb = trio; }
     if (fb) return fb;
     const start = Math.floor(rand() * SHAPES.length);
     for (let i = 0; i < SHAPES.length; i++) { const s = SHAPES[(start + i) % SHAPES.length]; if (anyFit(g, s.k)) { const trio = three(); trio[Math.floor(rand() * 3)] = mk(s); return trio; } }
@@ -1675,6 +1703,18 @@ const Core = (() => {
     return p.packs;
   }
 
+  // One paid Continue. It goes into the save's small bank (meta.cont) and is used from there, so a Continue that was paid for while
+  // no lost run was waiting (the app closed in the middle of buying) is kept for the next loss. Returns 1, or 0 if this purchase
+  // was already handed over or is not the Continue product.
+  function contGrant(meta, productId, token) {
+    if (productId !== CONT.id || typeof token !== "string" || !token) return 0;
+    const key = tokenKey(token); if (meta.paid.includes(key)) return 0;
+    meta.paid.push(key); if (meta.paid.length > 60) meta.paid.splice(0, meta.paid.length - 60);
+    meta.cont = Math.min(99, (meta.cont || 0) + 1);
+    return 1;
+  }
+  const contUse = meta => { if (!(meta.cont > 0)) return false; meta.cont--; return true; };
+
   // ---- free packs: one every 12 hours, up to 2 waiting ----
   const freeAvail = (stamp, now) => Math.max(0, Math.min(FREE_MAX, Math.floor((now - stamp) / FREE_MS)));
   function freeClaim(stamp, now) { const el = now - stamp; if (el < FREE_MS) return null; return el >= FREE_MAX * FREE_MS ? now - (FREE_MAX - 1) * FREE_MS : stamp + FREE_MS; }
@@ -1704,7 +1744,7 @@ const Core = (() => {
     anOk: [0, 0, 2],                          // play-stats consent: 0 not asked yet, 1 yes, 2 no
     season: [1, 0, 1] };                      // seasonal looks on or off
   function newMeta(now) {
-    const o = { v: 3, up: 1, name: "", av: "", ob: 0, ach: [], thm: [], sp: { id: "", pts: 0, got: 0 }, cards: {}, chg: {}, spare: 0, crew: [], best: 0, packs: 0, charge: COST / 2, freeStamp: now - FREE_MAX * FREE_MS, sets: [], paid: [], stats: { combo: 0 }, sound: true, tut: 0, savedAt: 0, coins: 0, shards: 0, pity: 0, stars: "", seen: [], top: [], day: {} };
+    const o = { v: 3, up: 1, name: "", av: "", ob: 0, ach: [], thm: [], sp: { id: "", pts: 0, got: 0 }, cards: {}, chg: {}, spare: 0, crew: [], best: 0, packs: 0, cont: 0, charge: COST / 2, freeStamp: now - FREE_MAX * FREE_MS, sets: [], paid: [], stats: { combo: 0 }, sound: true, tut: 0, savedAt: 0, coins: 0, shards: 0, pity: 0, stars: "", seen: [], top: [], day: {} };
     SUMS.forEach(k => { o.stats[k] = 0; }); FLAGS.forEach(k => { o[k] = true; }); OFFS.forEach(k => { o[k] = false; }); DAYG.forEach(g => g.forEach(k => { o.day[k] = 0; }));
     for (const k in NUMS) o[k] = NUMS[k][0];
     return o;
@@ -1718,6 +1758,7 @@ const Core = (() => {
     for (const c of ALL) if (o.cards[c.id] > 0 && active(c.id)) o.chg[c.id] = mc && mc[c.id] != null ? int(mc[c.id], 0, CHG_MAX) : chgStart(c.id, o.cards[c.id]) + (!mc && o.crew.includes(c.id) ? 3 : 0);
     o.spare = int(m.spare, 0, CHG_MAX);
     o.best = int(m.best, 0, 1e9); o.packs = int(m.packs, 0, 9999); o.charge = int(m.charge, 0, COST - 1);
+    o.cont = int(m.cont, 0, 99);   // paid Continues not used yet (older saves have none)
     o.freeStamp = Number.isFinite(+m.freeStamp) ? Math.min(+m.freeStamp, now) : o.freeStamp;
     o.sets = Array.isArray(m.sets) ? SETS.map((_, s) => s).filter(s => m.sets.includes(s)) : [];
     o.paid = Array.isArray(m.paid) ? m.paid.filter((k, i, a) => typeof k === "string" && /^[0-9a-z]{1,14}$/.test(k) && a.indexOf(k) === i).slice(-60) : [];
@@ -1742,13 +1783,23 @@ const Core = (() => {
     const sp = m.sp && typeof m.sp === "object" ? m.sp : {}; o.sp = { id: typeof sp.id === "string" && /^[a-z0-9-]{1,16}$/.test(sp.id) ? sp.id : "", pts: int(sp.pts, 0, 1e7), got: int(sp.got, 0, 1048575) };
     return o;
   }
+  // An Endless run. kind[64] says what each special square is (0 = an ordinary gem; see Camp.K: rock 2, cracked rock 3, ice 4,
+  // jammer 9, boost tiles 10 to 18); such a square has 8 in grid. ex counts the moves until the next boost tile / ice or rock /
+  // jammer block lands. seed feeds those landings (never the dealing of blocks). x2 = blocks still scoring double. cont = 1 once the
+  // paid Continue has been used in this run.
+  const SPECIAL = v => v === 2 || v === 3 || v === 4 || v === 9 || (v >= 10 && v <= 18);
+  function traySeed(tray, salt) { let a = 0x9E3779B9 ^ (salt | 0); for (const p of tray) if (p) for (const q of p.k) a = Math.imul(a ^ (q[0] * 8 + q[1] + p.c * 64 + 1), 2654435761) ^ (a >>> 13); return a >>> 0; }
   function newRun(meta, rand) {
-    const grid = new Array(NN).fill(0);
-    return { grid, tray: deal(grid, 0, rand), crew: meta.crew.filter(id => meta.cards[id] > 0).slice(0, 3).map(id => crewEntry(id, meta.cards[id], meta)), score: 0, streak: 0, since: 0, moves: 0, lines: 0, packs: 0, over: false, stuck: false, best0: meta.best };
+    const grid = new Array(NN).fill(0), tray = deal(grid, 0, rand);
+    return { grid, kind: new Array(NN).fill(0), tray, crew: meta.crew.filter(id => meta.cards[id] > 0).slice(0, 3).map(id => crewEntry(id, meta.cards[id], meta)), score: 0, streak: 0, since: 0, moves: 0, lines: 0, packs: 0, over: false, stuck: false, best0: meta.best,
+      ex: { b: 0, h: 0, j: 0 }, seed: traySeed(tray, (meta.stats.runs || 0) * 7919 + (meta.stats.lines || 0)), x2: 0, cont: 0, top: 0 };
   }
   function fixRun(r) {
     if (!r || !Array.isArray(r.grid) || r.grid.length !== NN || !Array.isArray(r.tray) || r.tray.length !== 3) return null;
-    const grid = r.grid.map(v => (v >= 1 && v <= 7 ? v | 0 : 0));
+    // a run saved before Endless had special squares has no kind list: it gets an empty one and plays on
+    const kind = Array.isArray(r.kind) && r.kind.length === NN ? r.kind.map((v, i) => (r.grid[i] === 8 && SPECIAL(v) ? v | 0 : 0)) : new Array(NN).fill(0);
+    const grid = r.grid.map((v, i) => (kind[i] ? 8 : v >= 1 && v <= 7 ? v | 0 : 0));
+    const ex = r.ex && typeof r.ex === "object" ? r.ex : {};
     const tray = r.tray.map(p => {
       if (!p || !Array.isArray(p.k) || !p.k.length || p.k.length > 9) return null;
       const k = p.k.filter(q => Array.isArray(q) && q[0] >= 0 && q[0] < 5 && q[1] >= 0 && q[1] < 5).map(q => [q[0] | 0, q[1] | 0]);
@@ -1756,7 +1807,8 @@ const Core = (() => {
     });
     if (tray.every(p => !p)) return null;
     const crew = Array.isArray(r.crew) ? r.crew.filter(e => e && CARD[e.id]).slice(0, 3).map(e => ({ id: e.id, lv: int(e.lv, 1, 3), left: int(e.left, -1, 99) })) : [];
-    return { grid, tray, crew, score: int(r.score, 0, 1e9), streak: int(r.streak, 0, 1e6), since: int(r.since, 0, 1e6), moves: int(r.moves, 0, 1e9), lines: int(r.lines, 0, 1e9), packs: int(r.packs, 0, 1e6), over: !!r.over, stuck: !!r.stuck, best0: int(r.best0, 0, 1e9) };
+    return { grid, kind, tray, crew, score: int(r.score, 0, 1e9), streak: int(r.streak, 0, 1e6), since: int(r.since, 0, 1e6), moves: int(r.moves, 0, 1e9), lines: int(r.lines, 0, 1e9), packs: int(r.packs, 0, 1e6), over: !!r.over, stuck: !!r.stuck, best0: int(r.best0, 0, 1e9),
+      ex: { b: int(ex.b, 0, 999), h: int(ex.h, 0, 999), j: int(ex.j, 0, 999) }, seed: Number.isFinite(+r.seed) ? +r.seed >>> 0 : traySeed(tray.filter(Boolean), int(r.score, 0, 1e9)), x2: int(r.x2, 0, 3), cont: r.cont ? 1 : 0, top: r.top ? 1 : 0 };
   }
   function mergeStars(a, b) { let s = ""; for (let i = 0; i < Math.max(a.length, b.length); i++) s += Math.max(+a[i] || 0, +b[i] || 0); return s.replace(/0+$/, ""); }
   const starsOf = (meta, id) => +meta.stars[id - 1] || 0;
@@ -1882,7 +1934,7 @@ const Core = (() => {
     for (const c of ALL) { const n = (T.cards[c.id] || 0) + (M.cards[c.id] || 0) - (B.cards[c.id] || 0); if (n > 0) o.cards[c.id] = n; }
     o.chg = {}; for (const c of ALL) if (o.cards[c.id] > 0 && active(c.id)) o.chg[c.id] = int((T.chg[c.id] || 0) + (M.chg[c.id] || 0) - (B.chg[c.id] || 0), 0, CHG_MAX);
     o.spare = int(T.spare + M.spare - B.spare, 0, CHG_MAX);
-    o.packs = Math.max(0, T.packs + M.packs - B.packs);
+    o.packs = Math.max(0, T.packs + M.packs - B.packs); o.cont = int(T.cont + M.cont - B.cont, 0, 99);
     let ch = T.charge + M.charge - B.charge; while (ch >= COST) { ch -= COST; o.packs++; } o.charge = Math.max(0, Math.floor(ch));
     o.best = Math.max(T.best, M.best);
     o.freeStamp = Math.max(T.freeStamp, M.freeStamp);
@@ -1977,7 +2029,7 @@ const Core = (() => {
     spend(run, meta, e); run.tray = deal(run.grid, run.score, rand); return true;
   }
 
-  return { buyCharges, adChgLeft, adCharge, SNAP, snap, CHG_NEW, CHG_DUP, CHG_LVUP, CHG_STARTER, CHG_BUY, CHG_ADS, active, chgStart, charges, chgAdd, chgGive, chgCrew, chgTotal, spend, syncCrew, N, COST, FREE_MS, FREE_MAX, SET_REWARD, LEVEL_AT, ODDS, SHOP, tokenKey, buyGrant, RAR, SETS, SHAPES, POW, CARDS, XCARDS, ALL, CARD, PITY, PITY_ODDS, DUST, CRAFT, pityLeft, craft, NUMS, ACH, ACHV, achNow, achList, achCheck, secret, RANKS, xp, rank, cleanName, NAMES, funName, LOGIN, HINTS, ADPACKS, PRICE, loginState, loginClaim, dailyDone, dailyStreak, dailyWin, chest, hintsLeft, useHint, adPacksLeft, adPack, storeGift, eventWin, buyCoins, starsOf, setStars, starSum, cleared, nextLevel, pack, unpack, int, same, mk, dims, norm, rotate, fits, anyFit, place, solvable, deal, level, chargeBonus, uses, useText, powerText, crewEntry, rollPack, checkSets, grant, freeAvail, freeClaim, freeNext, packsReady, takePack, newMeta, fixMeta, newRun, fixRun, merge3, hasPow, cap, addCharge, move, stuck, canAct, reviveReady, revive, aim, power, trayPower, reroll };
+  return { CONT, contGrant, contUse, pick, buyCharges, adChgLeft, adCharge, SNAP, snap, CHG_NEW, CHG_DUP, CHG_LVUP, CHG_STARTER, CHG_BUY, CHG_ADS, active, chgStart, charges, chgAdd, chgGive, chgCrew, chgTotal, spend, syncCrew, N, COST, FREE_MS, FREE_MAX, SET_REWARD, LEVEL_AT, ODDS, SHOP, tokenKey, buyGrant, RAR, SETS, SHAPES, POW, CARDS, XCARDS, ALL, CARD, PITY, PITY_ODDS, DUST, CRAFT, pityLeft, craft, NUMS, ACH, ACHV, achNow, achList, achCheck, secret, RANKS, xp, rank, cleanName, NAMES, funName, LOGIN, HINTS, ADPACKS, PRICE, loginState, loginClaim, dailyDone, dailyStreak, dailyWin, chest, hintsLeft, useHint, adPacksLeft, adPack, storeGift, eventWin, buyCoins, starsOf, setStars, starSum, cleared, nextLevel, pack, unpack, int, same, mk, dims, norm, rotate, fits, anyFit, place, solvable, deal, level, chargeBonus, uses, useText, powerText, crewEntry, rollPack, checkSets, grant, freeAvail, freeClaim, freeNext, packsReady, takePack, newMeta, fixMeta, newRun, fixRun, merge3, hasPow, cap, addCharge, move, stuck, canAct, reviveReady, revive, aim, power, trayPower, reroll };
 })();
 /*CORE-END*//*CAMP-START*/
 // The rules of a campaign level. Pure, like Core: no screen, no clock, no saving. A level run has the same fields as an Endless run
@@ -1985,8 +2037,8 @@ const Core = (() => {
 // grid: 0 empty, 1-7 gem colours, 8 a special solid. kind says which special it is (0 = an ordinary gem).
 const Camp = (() => {
   const { N, SHAPES } = Core, NN = 64;
-  const TGT = 1, STONE = 2, CRACK = 3, ICE = 4, JUNK = 5, KEY = 6, CROWN = 7, JEWEL = 8, BOMB = 10, ROWZ = 11, COLZ = 12, CROSS = 13, WIPE = 14, CLOCK = 15, X2 = 16, CHARGE = 17, SHUF = 18, MOVER = 20;
-  const K = { TGT, STONE, CRACK, ICE, JUNK, KEY, CROWN, JEWEL, BOMB, ROWZ, COLZ, CROSS, WIPE, CLOCK, X2, CHARGE, SHUF, MOVER };
+  const TGT = 1, STONE = 2, CRACK = 3, ICE = 4, JUNK = 5, KEY = 6, CROWN = 7, JEWEL = 8, JAM = 9, BOMB = 10, ROWZ = 11, COLZ = 12, CROSS = 13, WIPE = 14, CLOCK = 15, X2 = 16, CHARGE = 17, SHUF = 18, MOVER = 20;
+  const K = { TGT, STONE, CRACK, ICE, JUNK, KEY, CROWN, JEWEL, JAM, BOMB, ROWZ, COLZ, CROSS, WIPE, CLOCK, X2, CHARGE, SHUF, MOVER };
   const isItem = k => k >= 6 && k <= 8, isBoost = k => k >= 10 && k <= 18, isMover = k => k >= 20;
   const DR = [0, 1, 0, -1], DC = [1, 0, -1, 0];   // mover headings: right, down, left, up
   const ZERO = new Array(NN).fill(0);
@@ -2027,7 +2079,7 @@ const Camp = (() => {
         if (seen[i]) continue; seen[i] = 1;
         if (!g[i]) continue; const k = kd[i];
         if (k === STONE) { kd[i] = CRACK; out.cracked.push(i); continue; }
-        if (isItem(k)) continue;
+        if (isItem(k) || k === JAM) continue;   // items stay; a jammer block (Endless) is never removed by anything
         g[i] = 0; kd[i] = 0; out.removed.push(i); if (boost) out.extra++;
         if (k === TGT) out.tgt++; else if (k === CRACK) out.stone++; else if (k === ICE) out.ice++; else if (k === JUNK) out.junk++;
         else if (isBoost(k)) { out.boosts.push([k, i]); pending.push([k, i]); }
@@ -2049,9 +2101,9 @@ const Camp = (() => {
   function sweep(st, out, opt, first) {
     const g = st.grid, kd = st.kind, rows = [], cols = [];
     for (let i = 0; i < N; i++) {
-      let fr = true, fc = true;
-      for (let j = 0; j < N; j++) { const a = i * N + j, b = j * N + i; if (!g[a] || kd[a] === ICE) fr = false; if (!g[b] || kd[b] === ICE) fc = false; }
-      if (fr) rows.push(i); if (fc) cols.push(i);
+      let fr = true, fc = true, jr = 0, jc = 0;   // jr, jc: jammer blocks in the line. They count as filled, but a line of nothing else has nothing to clear.
+      for (let j = 0; j < N; j++) { const a = i * N + j, b = j * N + i; if (!g[a] || kd[a] === ICE) fr = false; else if (kd[a] === JAM) jr++; if (!g[b] || kd[b] === ICE) fc = false; else if (kd[b] === JAM) jc++; }
+      if (fr && jr < N) rows.push(i); if (fc && jc < N) cols.push(i);
     }
     const L = rows.length + cols.length; if (!L) return 0;
     (first ? out.rows : out.xrows).push(...rows); (first ? out.cols : out.xcols).push(...cols);
@@ -2100,7 +2152,7 @@ const Camp = (() => {
   // ---- can these blocks all be placed, in some order? Careful version: ice and stone never clear, items never move. ----
   function solv(run, pieces) {
     const g = run.grid, kd = run.kind, o = new Array(N).fill(0), keep = new Array(N).fill(0), ice = new Array(N).fill(0); let iceCols = 0;
-    for (let i = 0; i < NN; i++) if (g[i]) { const r = i >> 3, b = 1 << (i & 7), k = kd[i]; o[r] |= b; if (k === ICE) { ice[r] |= b; iceCols |= b; keep[r] |= b; } else if (k === STONE || isItem(k)) keep[r] |= b; }
+    for (let i = 0; i < NN; i++) if (g[i]) { const r = i >> 3, b = 1 << (i & 7), k = kd[i]; o[r] |= b; if (k === ICE) { ice[r] |= b; iceCols |= b; keep[r] |= b; } else if (k === STONE || k === JAM || isItem(k)) keep[r] |= b; }
     const ms = pieces.filter(Boolean).map(p => { const { w, h } = Core.dims(p.k), m = new Array(h).fill(0); for (const [r, c] of p.k) m[r] |= 1 << c; return { m, w, h }; });
     let budget = 9000;
     const fit = (rows, s, r0, c0) => { for (let i = 0; i < s.h; i++) if (rows[r0 + i] & (s.m[i] << c0)) return false; return true; };
@@ -2469,8 +2521,172 @@ const Camp = (() => {
   }
   const best = (run, cfg) => { const p = plan(run, cfg, 5); return p && p.length ? { i: p[0][0], r: p[0][1], c: p[0][2] } : null; };
 
-  return { K, isItem, isBoost, isMover, rnd, newOut, hit, drop, sweep, settle, resolve, fall, solv, deal, redeal, tally, win, lose, fracLeft, newRun, fixRun, undo, move, twist, clockOut, tick, strike, power, revive, reroll, rescue, gift, densest, plan, best, slotsOf };
+  // ================= Endless mode: boost tiles, ice, rock and jammer blocks =================
+  // An Endless run plays by the same square rules as a level (hit, sweep, resolve above), so ice and rock break exactly as they do
+  // in the campaign. What differs is where the special squares come from: they land by themselves while the run goes on.
+  // EVERYTHING THAT TUNES THIS IS IN THE TABLE BELOW.
+  //   gap = [fewest, most] moves between two landings. Where there are two gaps, the first is used at `from` points and it shrinks
+  //   evenly to the second by `full` points. max = the most that may sit on the board at once.
+  const ENDLESS = {
+    boost: { first: [10, 16], gap: [16, 26], max: 2, kinds: [BOMB, ROWZ, COLZ, CROSS, WIPE, X2, CHARGE] },   // a boost tile every 16 to 26 moves (the first after 10 to 16)
+    hard: { from: 2000, full: 20000, gap0: [26, 34], gap1: [12, 16], ice: 3, rock: 5 },  // ice and rock: from 2,000 points, rare at first (one every 26 to 34 moves), one every 12 to 16 moves from 20,000 points on
+    jam: { from: 20000, full: 60000, gap0: [40, 55], gap1: [22, 30], max: 6 },           // jammer blocks: from 20,000 points, one every 40 to 55 moves, down to every 22 to 30; never more than 6 on the board
+    room: 10                                                                            // nothing lands while fewer than this many squares are free
+  };
+  const BIG3 = [SHAPES.find(s => s.k.length === 9), SHAPES.find(s => s.k.length === 5 && Core.dims(s.k).h === 1), SHAPES.find(s => s.k.length === 5 && Core.dims(s.k).w === 1)].map(Core.mk);
+  const eready = run => { if (!Array.isArray(run.kind) || run.kind.length !== NN) run.kind = new Array(NN).fill(0); if (!run.ex) run.ex = { b: 0, h: 0, j: 0 }; if (!Number.isFinite(run.seed)) run.seed = (run.score * 7919 + run.moves * 31 + 12345) >>> 0; if (!run.x2) run.x2 = 0; return run; };
+  const special = run => { const kd = run.kind; if (kd) for (let i = 0; i < NN; i++) if (kd[i]) return true; return false; };
+  const countK = (run, test) => { let n = 0; for (let i = 0; i < NN; i++) if (run.grid[i] && test(run.kind[i])) n++; return n; };
+  // would a solid square put here complete a row or a column all by itself?
+  function fillsLine(g, kd, i) { const r = i >> 3, c = i & 7; let fr = true, fc = true; for (let j = 0; j < N; j++) { const a = r * N + j, b = j * N + c; if (a !== i && (!g[a] || kd[a] === ICE)) fr = false; if (b !== i && (!g[b] || kd[b] === ICE)) fc = false; } return fr || fc; }
+  // Ice breaks when a line next to it clears, and a line that holds ice can never clear. So every ice block must have a line beside
+  // it that is free of ice, or become breakable once another ice block has gone. False = some ice could never be broken by clears.
+  function iceOk(kd) {
+    const ice = []; for (let i = 0; i < NN; i++) if (kd[i] === ICE) ice.push(i);
+    for (let again = true; again && ice.length;) {
+      again = false; const rowIce = new Array(N).fill(0), colIce = new Array(N).fill(0); ice.forEach(i => { rowIce[i >> 3]++; colIce[i & 7]++; });
+      for (let n = ice.length - 1; n >= 0; n--) { const r = ice[n] >> 3, c = ice[n] & 7; if ((r > 0 && !rowIce[r - 1]) || (r < N - 1 && !rowIce[r + 1]) || (c > 0 && !colIce[c - 1]) || (c < N - 1 && !colIce[c + 1])) { ice.splice(n, 1); again = true; } }
+    }
+    return !ice.length;
+  }
+  // The jammer blocks alone (everything else imagined away): is there still room to play? Every shape in the game must fit somewhere,
+  // the three biggest (the 3 by 3 square and both 5-long bars) must fit together, and no row or column may hold more than 2.
+  function jamRoom(kd) {
+    const g = new Array(NN).fill(0), k = new Array(NN).fill(0), rows = new Array(N).fill(0), cols = new Array(N).fill(0); let n = 0;
+    for (let i = 0; i < NN; i++) if (kd[i] === JAM) { g[i] = 8; k[i] = JAM; n++; if (++rows[i >> 3] > 2 || ++cols[i & 7] > 2) return false; }
+    if (!n) return true;
+    for (const s of SHAPES) if (!Core.anyFit(g, s.k)) return false;
+    return solv({ grid: g, kind: k }, BIG3);
+  }
+  const eroom = run => jamRoom(eready(run).kind);
+  // Put one special square on a free square. Never on a square that would complete a line by itself, never so that a waiting block
+  // loses its last place, never so that waiting blocks which could all be placed no longer can. Returns the square, or -1.
+  function espawn(run, kind) {
+    const g = run.grid, kd = run.kind, e = []; for (let i = 0; i < NN; i++) if (!g[i]) e.push(i);
+    if (e.length < ENDLESS.room) return -1;
+    const waiting = run.tray.some(Boolean), was = waiting && solv(run, run.tray);
+    for (let t = 0; t < 10; t++) {
+      const i = pickOf(run, e); if (kind !== ICE && fillsLine(g, kd, i)) continue;
+      g[i] = 8; kd[i] = kind;
+      let ok = !waiting || (!Core.stuck(run) && (!was || solv(run, run.tray)));
+      if (ok && kind === ICE) ok = iceOk(kd);
+      if (ok && kind === JAM) ok = jamRoom(kd);
+      if (ok) return i;
+      g[i] = 0; kd[i] = 0;
+    }
+    return -1;
+  }
+  const gapOf = (run, a, b, t) => { const lo = Math.round(a[0] + (b[0] - a[0]) * t), hi = Math.round(a[1] + (b[1] - a[1]) * t); return lo + Math.floor(rnd(run) * (hi - lo + 1)); };
+  const ramp = (score, c) => Math.max(0, Math.min(1, (score - c.from) / Math.max(1, c.full - c.from)));
+  // after each block: does something land? At most one thing per move. fx gets ["drop", square, kind] for a boost tile,
+  // ["hard", square, kind] for ice or rock, ["jam", square] for a jammer block.
+  function elands(run, fx) {
+    const E = ENDLESS, ex = run.ex, sc = run.score; let done = false;
+    const step = (key, on, gap, land) => {
+      if (!on) return;
+      if (!(ex[key] > 0)) { ex[key] = gap(); return; }          // not counting yet: start the count
+      if (--ex[key] > 0) return;
+      if (done) { ex[key] = 1; return; }                        // something else landed this move: next move
+      const got = land(); if (got) { done = true; ex[key] = gap(); fx.push(got); } else ex[key] = 2;   // no good square right now: try again soon
+    };
+    step("j", sc >= E.jam.from, () => gapOf(run, E.jam.gap0, E.jam.gap1, ramp(sc, E.jam)), () => { if (countK(run, k => k === JAM) >= E.jam.max) return null; const i = espawn(run, JAM); return i >= 0 ? ["jam", i] : null; });
+    step("h", sc >= E.hard.from, () => gapOf(run, E.hard.gap0, E.hard.gap1, ramp(sc, E.hard)), () => {
+      const iceFull = countK(run, k => k === ICE) >= E.hard.ice, rockFull = countK(run, k => k === STONE || k === CRACK) >= E.hard.rock; if (iceFull && rockFull) return null;
+      let kind = rnd(run) < .5 ? ICE : STONE; if (kind === ICE && iceFull) kind = STONE; else if (kind === STONE && rockFull) kind = ICE;
+      let i = espawn(run, kind); if (i < 0 && kind === ICE && !rockFull) { kind = STONE; i = espawn(run, kind); }
+      return i >= 0 ? ["hard", i, kind] : null;
+    });
+    step("b", true, () => gapOf(run, E.boost.gap, E.boost.gap, 0), () => { if (countK(run, isBoost) >= E.boost.max) return null; const k = pickOf(run, E.boost.kinds), i = espawn(run, k); return i >= 0 ? ["drop", i, k] : null; });
+  }
+  // new blocks for an Endless board. With special squares on it the careful check is used (ice, rock and jammers do not simply clear).
+  const edeal = (run, rand) => (special(run) ? Core.deal(run.grid, run.score, rand, trio => solv(run, trio)) : Core.deal(run.grid, run.score, rand));
+  function enew(meta, rand) { const run = Core.newRun(meta, rand); eready(run); run.ex.b = gapOf(run, ENDLESS.boost.first, ENDLESS.boost.first, 0); return run; }
+  // One block in Endless. With no special square in play this scores exactly as Core.move does.
+  function emove(run, meta, i, r0, c0, rand) {
+    const p = run.tray[i];
+    if (run.over || !p || !Core.fits(run.grid, p.k, r0, c0)) return null;
+    eready(run);
+    const st = { grid: run.grid.slice(), kind: run.kind.slice() }, out = newOut();
+    const L = resolve(st, p.k, r0, c0, p.c, out, { mid: true }), LT = out.LT;
+    run.grid = st.grid; run.kind = st.kind; run.tray[i] = null; run.moves++;
+    const lock = !!Core.hasPow(run, "streak"); let gain = p.k.length, charge = 0, perfect = false, mult = 1;
+    if (L) {
+      run.streak = run.streak > 0 ? run.streak + 1 : 1; run.since = 0;
+      mult = Math.min(run.streak, Core.cap(run));
+      gain += 10 * L * L * mult;
+      charge = 9 * L + 3 * (L - 1) + Math.min(8, 2 * (run.streak - 1));
+      perfect = run.grid.every((v, j) => !v || run.kind[j] === JAM);   // a clean sweep: nothing left but jammer blocks
+      if (perfect) { gain += 200; charge += 30; }
+      const cb = Core.hasPow(run, "charge"); if (cb) charge *= 1 + Core.chargeBonus(cb.lv);
+      gain += 10 * (LT - L);   // lines wiped by a zap tile this block set off
+      run.lines += LT; meta.stats.lines += LT;
+    } else { run.since++; if (!lock) run.streak = 0; }
+    gain += 3 * out.extra;
+    const doubled = run.x2 > 0; if (doubled) { gain *= 2; run.x2--; }
+    if (out.x2) run.x2 = 3;
+    charge = Math.round(charge + out.charge);
+    run.score += gain; if (run.score > meta.best) meta.best = run.score;
+    meta.stats.score += gain; if (LT > meta.stats.combo) meta.stats.combo = LT; meta.stats.boosts += out.boosts.length;
+    const packs = Core.addCharge(meta, charge); run.packs += packs;
+    const fx = []; elands(run, fx);
+    let dealt = false;
+    if (out.shuf) run.tray = [null, null, null];
+    if (run.tray.every(t => !t)) { run.tray = edeal(run, rand); dealt = true; }
+    return { res: { mid: out.mid, midK: out.midK, grid: run.grid, placed: out.placed, rows: out.rows, cols: out.cols, cleared: out.removed }, L, LT, gain, charge, packs, streak: run.streak, mult, perfect, doubled, dealt, out, fx };
+  }
+  // a robot power, Second Wind: the squares are hit the way a level hits them (rock cracks first, boost tiles go off), and a jammer
+  // block is never among them
+  function estrike(run, meta, cells, pts) {
+    const st = { grid: run.grid.slice(), kind: run.kind.slice() }, out = newOut();
+    hit(st, cells, out, false); settle(st, out, null, false);
+    run.grid = st.grid; run.kind = st.kind;
+    const gain = pts * out.removed.length + 3 * out.extra; run.score += gain; if (meta && run.score > meta.best) meta.best = run.score;
+    if (out.x2) run.x2 = 3;
+    let packs = 0; if (meta) { meta.stats.boosts += out.boosts.length; packs = Core.addCharge(meta, out.charge); run.packs += packs; }
+    return { hit: out.removed, out, gain, packs };
+  }
+  function eaim(run, type, r, c) {
+    eready(run); let cells = Core.aim(run.grid, type, r, c);
+    if (type === "color" && run.grid[r * N + c] === 8) cells = [r * N + c];   // a special square is not a colour: only that one square
+    return cells.filter(ix => run.kind[ix] !== JAM);
+  }
+  function epower(run, meta, i, r, c) {
+    const e = run.crew[i]; if (run.over || !e || e.left <= 0) return null;
+    const type = Core.CARD[e.id].pow; if (Core.POW[type].t !== "cell") return null;
+    const cells = eaim(run, type, r, c); if (!cells.length) return null;
+    Core.spend(run, meta, e); return estrike(run, meta, cells, 2);
+  }
+  function erevive(run, meta) {
+    const e = Core.reviveReady(run); if (!e) return null; eready(run);
+    const g = run.grid, kd = run.kind, lines = [], can = ix => g[ix] && kd[ix] !== JAM;
+    for (let i = 0; i < N; i++) { let a = 0, b = 0; for (let j = 0; j < N; j++) { if (can(i * N + j)) a++; if (can(j * N + i)) b++; } lines.push({ row: true, i, n: a }, { row: false, i, n: b }); }
+    lines.sort((x, y) => y.n - x.n);
+    const cells = new Set(); lines.slice(0, 2 + e.lv).forEach(l => { for (let j = 0; j < N; j++) { const ix = l.row ? l.i * N + j : j * N + l.i; if (can(ix)) cells.add(ix); } });
+    if (meta) Core.spend(run, meta, e); else e.left = 0;
+    return estrike(run, meta, [...cells], 0);
+  }
+  function ereroll(run, i, rand, meta) {
+    const e = run.crew[i]; if (run.over || !e || e.left <= 0 || Core.CARD[e.id].pow !== "reroll") return false;
+    eready(run); Core.spend(run, meta, e); run.tray = edeal(run, rand); return true;
+  }
+  // The paid Continue, once per run: everything goes except the jammer blocks, the score stays, new blocks are dealt.
+  // Not possible when the jammer blocks alone leave no room to play (eroom). The lost run comes off the list of finished runs.
+  function econt(run, meta, rand) {
+    if (!run || run.lv || !run.over || run.cont || !eroom(run)) return null;
+    const g = run.grid, kd = run.kind, cleared = [];
+    for (let i = 0; i < NN; i++) if (g[i] && kd[i] !== JAM) { cleared.push(i); g[i] = 0; kd[i] = 0; }
+    run.over = false; run.stuck = false; run.cont = 1; run.streak = 0; run.since = 0;
+    run.tray = edeal(run, rand);
+    if (Core.stuck(run)) run.tray = [single(), single(), single()];   // cannot happen while eroom holds; kept as a last safety net
+    if (meta) { meta.stats.runs = Math.max(0, (meta.stats.runs || 0) - 1); if (run.top) { const t = meta.top.findIndex(x => x[0] === run.score); if (t >= 0) meta.top.splice(t, 1); } }   // run.top = this run had been written into the best-runs list
+    run.top = 0;
+    return cleared;
+  }
+  const Endless = { CFG: ENDLESS, ready: eready, special, iceOk, jamRoom, room: eroom, spawn: espawn, lands: elands, deal: edeal, newRun: enew, move: emove, strike: estrike, aim: eaim, power: epower, revive: erevive, reroll: ereroll, cont: econt };
+
+  return { Endless, K, isItem, isBoost, isMover, rnd, newOut, hit, drop, sweep, settle, resolve, fall, solv, deal, redeal, tally, win, lose, fracLeft, newRun, fixRun, undo, move, twist, clockOut, tick, strike, power, revive, reroll, rescue, gift, densest, plan, best, slotsOf };
 })();
+const Endless = Camp.Endless;
 /*CAMP-END*/
 /*CAMP-START*/
 // Written by tune.js: for each level [move or second limit, how many easing steps the bot asked for, 2-star score, 3-star score].
@@ -3746,6 +3962,9 @@ function save() { Ach.check(); Store.save(); Cloud.touch(); }
 //   consume(token)                                                                             marks one as handed over
 // The Android app supplies that object as window.PackStackStore. An installed web app gets one from the browser's Digital Goods API.
 // With neither (a plain web page, or a preview) the shop stays closed and says so: nothing in this file can take a payment by itself.
+// Two kinds of product go through it: packs (Core.SHOP) and the Endless Continue (Core.CONT). Both are consumables, and both are only
+// ever handed over against a purchase token the store itself returned. A purchase the store reports as not finished (state other
+// than "purchased": still pending, cancelled, refunded) is left alone and nothing is handed over for it.
 const PLAY_BILLING = "https://play.google.com/billing";
 async function findStore() {
   const own = window.PackStackStore;
@@ -3766,13 +3985,15 @@ async function findStore() {
 const Shop = {
   state: "closed",   // closed: no store here | wait: asking the store | open | none: nothing is on sale in this country
   store: null, items: {}, busy: false, note: "",
-  set(s) { this.state = s; if (view === "shop") viewShop(); },
+  set(s) { this.state = s; if (view === "shop") viewShop(); if (S.run && S.run.over && !S.run.lv) renderCont(); },
+  // has the store really finished this purchase? (a store that says nothing about state only ever lists finished ones)
+  done(pu) { return !pu || pu.purchaseState === undefined && pu.state === undefined || /^(purchased|1)$/i.test(String(pu.purchaseState !== undefined ? pu.purchaseState : pu.state)); },
   async init() {
     try {
       const st = await timeout(findStore(), 8000); if (!st) return this.set("closed");
       this.store = st; this.set("wait");
-      const got = await timeout(st.getDetails(Core.SHOP.map(p => p.id)), 10000);
-      this.items = {}; (got || []).forEach(d => { if (d && Core.SHOP.some(p => p.id === d.itemId)) this.items[d.itemId] = d; });
+      const got = await timeout(st.getDetails(Core.SHOP.map(p => p.id).concat(Core.CONT.id)), 10000);
+      this.items = {}; (got || []).forEach(d => { if (d && (d.itemId === Core.CONT.id || Core.SHOP.some(p => p.id === d.itemId))) this.items[d.itemId] = d; });
       this.set(Object.keys(this.items).length ? "open" : "none");
       this.restore();
     } catch (_) { this.store = null; this.items = {}; this.set("closed"); }
@@ -3787,11 +4008,20 @@ const Shop = {
     try { await timeout(this.store.consume(token), 10000); } catch (_) {}   // if this fails the purchase comes back at the next launch, where it is recognised and not paid out twice
     return n;
   },
+  // One paid Continue: into the save first (so it cannot be lost), then used at once if a lost Endless run is waiting for it.
+  // Returns 0 nothing new (already handed over) | 1 kept for the next lost run | 2 used right now.
+  async deliverCont(token) {
+    const n = Core.contGrant(S.meta, Core.CONT.id, token); let used = false;
+    if (n) { save(); used = continueRun(); }
+    try { await timeout(this.store.consume(token), 10000); } catch (_) {}
+    return n ? (used ? 2 : 1) : 0;
+  },
   // anything paid for but never handed over (the app closed in the middle of buying, say) is handed over now
   async restore() {
     try {
-      const list = await timeout(this.store.listPurchases(), 10000); let n = 0;
-      for (const pu of list || []) if (pu && pu.purchaseToken) n += await this.deliver(pu.itemId, pu.purchaseToken);
+      const list = await timeout(this.store.listPurchases(), 10000); let n = 0, c = 0;
+      for (const pu of list || []) { if (!pu || !pu.purchaseToken || !this.done(pu)) continue; if (pu.itemId === Core.CONT.id) c = Math.max(c, await this.deliverCont(pu.purchaseToken)); else n += await this.deliver(pu.itemId, pu.purchaseToken); }
+      if (c) { toast(c === 2 ? "Your Continue arrived: the board is cleared and your score stays." : "Your Continue arrived. It is saved for your next lost Endless run."); Sfx.buy(); if (S.run && S.run.over && !S.run.lv) renderCont(); }
       if (n) { toast(n + (n === 1 ? " pack" : " packs") + " from the shop " + (n === 1 ? "has" : "have") + " arrived."); Sfx.buy(); if (view === "packs" && PK.mode === "idle") viewPacks(); }
     } catch (_) {}
   },
@@ -3802,6 +4032,7 @@ const Shop = {
     try {
       const got = await this.store.purchase(id), token = got && got.purchaseToken;
       if (typeof token !== "string" || !token) throw new Error("no purchase token");
+      if (!this.done(got)) { this.busy = false; this.note = "Your payment is not finished yet. Your packs will arrive when Google Play confirms it."; if (view === "shop") viewShop(); return; }
       const n = await this.deliver(id, token);
       this.busy = false; this.note = "";
       if (!n) { this.note = "Those packs were already added."; if (view === "shop") viewShop(); return; }
@@ -3812,6 +4043,24 @@ const Shop = {
       this.busy = false;
       this.note = e && e.name === "AbortError" ? "No purchase was made." : "That did not go through. If Google Play did charge you, your packs will arrive the next time you open the game.";
       if (view === "shop") viewShop();
+    }
+  },
+  // The Continue. Nothing happens to the run until the store has returned a purchase token for a finished payment.
+  async buyCont() {
+    const r = S.endless;
+    if (this.state !== "open" || this.busy || EX.busy || !this.items[Core.CONT.id] || contState(r) !== "buy") return;
+    this.busy = EX.busy = true; EX.note = "Waiting for Google Play…"; renderCont();
+    try {
+      const got = await this.store.purchase(Core.CONT.id), token = got && got.purchaseToken;
+      if (typeof token !== "string" || !token) throw new Error("no purchase token");
+      if (!this.done(got)) { this.busy = EX.busy = false; EX.note = "Your payment is not finished yet. Nothing was changed. Your Continue will arrive when Google Play confirms it."; renderCont(); return; }
+      const n = await this.deliverCont(token);
+      this.busy = EX.busy = false; EX.note = n === 1 ? "Your Continue is saved for your next lost run." : n === 0 ? "That Continue was already used." : "";
+      if (n === 2) { Sfx.buy(); vib([20, 40, 30]); } else renderCont();
+    } catch (e) {
+      this.busy = EX.busy = false;
+      EX.note = e && e.name === "AbortError" ? "No purchase was made." : "That did not go through. If Google Play did charge you, your Continue will arrive the next time you open the game.";
+      renderCont();
     }
   }
 };
@@ -4058,6 +4307,7 @@ function renderHint() {
   else if (r.lv) t = lvHint(r) || " ";
   else if (S.meta.tut === 0) t = "Drag a block up. Fill a row or column to clear it.";
   else if (S.meta.tut === 1) t = "Clears fill the pack meter. Full meter, new pack.";
+  else if (r.x2 > 0) t = "Score x2 for your next " + (r.x2 === 1 ? "block" : r.x2 + " blocks") + ".";
   else if (r.streak >= 2) t = `Streak ×${Math.min(r.streak, Core.cap(r))}. Clear again to keep it going.`;
   el.textContent = t;
   if (end) { const b = h("button", "btn sm hot"); b.type = "button"; b.dataset.act = "end"; b.textContent = r.lv ? "give up" : "end the run"; el.appendChild(b); }
@@ -4079,10 +4329,10 @@ function renderAll() {
 const LIFT = [0, .5, 2];   // Drag style setting: under the finger, slight lift (half a square), big lift (two squares)
 function measure() { const a = cells[0].getBoundingClientRect(), b = cells[1].getBoundingClientRect(); geom = { ox: a.left, oy: a.top, cell: a.width, pitch: b.left - a.left }; }
 // how many lines a block would clear at a spot (used to choose between two equally close spots)
-function linesAt(p, r, c) { if (!S.run.lv) { const res = Core.place(S.run.grid, p.k, r, c, p.c); return res.rows.length + res.cols.length; } const st = { grid: S.run.grid.slice(), kind: S.run.kind.slice() }; return Camp.drop(st, p.k, r, c, p.c, Camp.newOut(), { mirror: LV.cfg.tw.mirror }); }
+function linesAt(p, r, c) { const st = { grid: S.run.grid.slice(), kind: (S.run.lv ? S.run : Endless.ready(S.run)).kind.slice() }; return Camp.drop(st, p.k, r, c, p.c, Camp.newOut(), { mirror: S.run.lv ? LV.cfg.tw.mirror : false }); }
 function clearGhost() { ghosted.forEach(c => c.classList.remove("ghost", "wc")); ghosted = []; }
 function showGhost(p, r, c) {
-  clearGhost(); const res = S.run.lv ? lvPreview(p, r, c) : Core.place(S.run.grid, p.k, r, c, p.c);
+  clearGhost(); const res = S.run.lv ? lvPreview(p, r, c) : endlessPreview(p, r, c);
   res.placed.forEach(ix => { const el = cells[ix]; el.classList.add("ghost"); el.style.setProperty("--gc", `var(--c${p.c})`); el.style.setProperty("--gg", `var(--g${p.c})`); ghosted.push(el); });
   res.cleared.forEach(ix => { const el = cells[ix]; el.classList.add("wc"); ghosted.push(el); });
   return res.cleared.length > 0;
@@ -4145,22 +4395,7 @@ function dragEnd(e) {
 }
 function doPlace(i, r0, c0) {
   if (S.run.lv) return lvPlace(i, r0, c0);
-  const ev = Core.move(S.run, S.meta, i, r0, c0); if (!ev) return false;
-  const res = ev.res, at = res.placed[0];
-  paint(res.mid, res.placed); Sfx.place(res.placed.length, res.mid[at]); Haptic.play("place");
-  if (ev.L) {
-    wipe(res.cleared, at, 1 + (ev.L - 1) * .35 + Math.min(4, ev.streak - 1) * .12); zap(res.rows, res.cols); sparksToMeter(res.cleared); Sfx.clear(ev.L, ev.streak); Haptic.play(ev.L > 1 ? "combo" : "clear"); if (document.body.classList.contains("danger")) Core.secret(S.meta, "s:close");
-    floatText("+" + fmt(ev.gain), at);
-    const shout = ev.perfect ? "Clean sweep!" : ev.L >= 2 ? ["", "", "Double!", "Triple!", "Blazing!", "Blazing!"][Math.min(ev.L, 5)] : ev.streak >= 2 ? "Streak ×" + ev.mult + "!" : "";
-    if (shout) floatText(shout, at, "shout");
-    if (ev.L >= 2 || ev.streak >= 3) { chatter(0); Bots.mood("cheer"); }
-    boardFx(ev.L >= 2 ? "shake" : "shake1");
-    if (ev.L >= 2 || ev.streak >= 3 || ev.perfect) Fx.flash(Math.min(.5, .1 + ev.L * .1 + ev.streak * .02));
-    if (S.meta.tut === 0) S.meta.tut = 1;
-  }
-  if (ev.packs) { toast(ev.packs > 1 ? ev.packs + " packs earned. Tap the pack to open them." : "Pack earned. Tap the pack to open it."); Sfx.pack(); again(meterEl, "flash"); again(btnPacks, "win"); if (!reduced) { const pb = btnPacks.getBoundingClientRect(); Fx.burst(pb.left + pb.width / 2, pb.top + pb.height / 2, 16, ["#fff", "#FFD35C"], 260); } if (S.meta.tut < 2) S.meta.tut = 2; }
-  renderTray(ev.dealt); if (ev.dealt && !ev.L) Sfx.deal(); renderHud(); renderHint(); afterAction(); save();
-  return true;
+  return endlessPlace(i, r0, c0);   // Endless: src/endless.js (boost tiles, ice, rock and jammer blocks can be on the board)
 }
 // after anything changes the board: is the player stuck, saved, or finished?
 function afterAction() {
@@ -4168,7 +4403,7 @@ function afterAction() {
   if (!Core.stuck(r)) { if (r.stuck) { r.stuck = false; renderCrew(); renderHint(); } return; }
   const saver = Core.reviveReady(r);
   if (saver) {
-    const name = CARD[saver.id].name, hit = r.lv ? lvRevive() : Core.revive(r, S.meta);
+    const name = CARD[saver.id].name, hit = r.lv ? lvRevive() : endlessRevive();
     if (hit && hit.length) { wipe(hit, hit[0]); Sfx.power(); toast(name + " used Second Wind (1 charge)"); }
     renderCrew();
     if (!Core.stuck(r)) { r.stuck = false; renderHint(); return; }
@@ -4180,7 +4415,7 @@ function endRun() {
   const r = S.run; if (r.over) return;
   if (r.lv) return lvFail("stuck");
   r.over = true; r.stuck = false; S.meta.stats.runs++; armed = null;
-  if (r.score > 0) { const t = S.meta.top; t.push([r.score, today()]); t.sort((a, b) => b[0] - a[0]); t.length = Math.min(t.length, 10); } trayEl.classList.remove("target"); boardEl.classList.remove("armed");
+  if (r.score > 0) { const t = S.meta.top, mine = [r.score, today()]; t.push(mine); t.sort((a, b) => b[0] - a[0]); t.length = Math.min(t.length, 10); r.top = t.includes(mine) ? 1 : 0; } EX.note = ""; $("overCont").dataset.st = ""; trayEl.classList.remove("target"); boardEl.classList.remove("armed");
   save(); Sfx.over(); renderCrew(); renderHint(); showOver();
 }
 function showOver() {
@@ -4189,9 +4424,10 @@ function showOver() {
   const fresh = r.score > r.best0 && r.score > 0;
   $("overNote").textContent = (fresh ? "New best. " : "") + r.lines + (r.lines === 1 ? " line" : " lines") + " cleared" + (r.packs ? ", " + r.packs + (r.packs === 1 ? " pack" : " packs") + " earned" : "") + "." + (!fresh && S.meta.best ? " Your best is " + fmt(S.meta.best) + "." : "");
   $("overPacks").hidden = !n; $("overPacks").textContent = n === 1 ? "Open 1 pack" : "Open " + n + " packs";
+  renderCont();
   $("over").hidden = false;
 }
-function newRun() { armed = null; S.endless = Core.newRun(S.meta); if (mode === "endless" || screen === "hub") S.run = S.endless; $("over").hidden = true; save(); renderAll(); }
+function newRun() { armed = null; S.endless = Endless.newRun(S.meta); if (mode === "endless" || screen === "hub") S.run = S.endless; $("over").hidden = true; save(); renderAll(); }
 
 // ---- robot powers ----
 function disarm() { if (!armed) return; armed = null; clearAim(); trayEl.classList.remove("target"); boardEl.classList.remove("armed"); renderCrew(); renderHint(); }
@@ -4205,7 +4441,7 @@ function crewTap(i) {
   if (r.lv && r.lv.jam) return flashHint("Robot powers are jammed on this level. No charges are spent.");
   if (e.left <= 0) return showGetMore(i);
   if (armed && armed.i === i) {
-    if (pw.t === "now" && (r.lv ? Camp.reroll(r, LV.cfg, i, S.meta) : Core.reroll(r, i, undefined, S.meta))) { armed = null; Sfx.power(); vib(15); renderTray(true); renderCrew(); renderHint(); afterAction(); save(); }
+    if (pw.t === "now" && (r.lv ? Camp.reroll(r, LV.cfg, i, S.meta) : Endless.reroll(r, i, undefined, S.meta))) { armed = null; Sfx.power(); vib(15); renderTray(true); renderCrew(); renderHint(); afterAction(); save(); }
     else disarm();
     return;
   }
@@ -4223,16 +4459,12 @@ function clearAim() { aimed.forEach(c => c.classList.remove("aim", "tgt")); aime
 function showAim(x, y) {
   clearAim(); const t = armed && cellAt(x, y); if (!t) return;
   const tc = cells[t.r * N + t.c]; tc.classList.add("tgt"); aimed.push(tc);
-  Core.aim(S.run.grid, armed.type, t.r, t.c).forEach(ix => { cells[ix].classList.add("aim"); aimed.push(cells[ix]); });
+  (S.run.lv ? Core.aim(S.run.grid, armed.type, t.r, t.c) : Endless.aim(S.run, armed.type, t.r, t.c)).forEach(ix => { cells[ix].classList.add("aim"); aimed.push(cells[ix]); });   // in Endless a jammer block is never lit up: nothing can hit it
 }
 const aiming = () => !!armed && POW[armed.type].t === "cell" && !S.run.over;
 function firePower(r, c) {
   if (S.run.lv) return lvPower(r, c);
-  const type = armed.type, hit = Core.power(S.run, S.meta, armed.i, r, c);
-  if (!hit) return flashHint("Nothing there to hit. Pick a spot with blocks.");
-  armed = null; boardEl.classList.remove("armed");
-  wipe(hit, r * N + c); zap(type === "row" || type === "cross" ? [r] : [], type === "col" || type === "cross" ? [c] : []); Sfx.power(); vib(15); floatText("+" + hit.length * 2, r * N + c);
-  renderCrew(); renderHud(); renderHint(); afterAction(); save();
+  return endlessPower(r, c);
 }
 
 // ---- sheets ----
@@ -4409,6 +4641,13 @@ function reveal(got) {
   PK.t = setTimeout(step, reduced ? 0 : 520);
 }
 
+// a full crew: the new robot takes the place of one that is in it (same slot). Charges belong to each robot and are not touched.
+function swapCrew(id, out) {
+  const m = S.meta, r = S.run, i = m.crew.indexOf(out); if (i < 0 || m.crew.includes(id) || !(m.cards[id] > 0)) return false;
+  m.crew[i] = id;
+  if (r.moves === 0 && !r.over) r.crew = m.crew.map(x => Core.crewEntry(x, m.cards[x], m));
+  return true;
+}
 function tile(c) {
   const n = S.meta.cards[c.id] || 0;
   return n ? `<button class="card r${c.rar}${S.meta.crew.includes(c.id) ? " crewed" : ""}${Fresh.has(c.id) ? " isnew" : ""}" data-card="${c.id}" type="button" aria-label="${c.name}, ${RAR[c.rar]}, ${n} ${n === 1 ? "copy" : "copies"}${Fresh.has(c.id) ? ", new" : ""}">${cardInner(c.id, n)}</button>`
@@ -4433,17 +4672,23 @@ function viewAlbum(keep) {
   html += `<div class="al-detail" id="alDetail" hidden></div></div>`;
   sheetIn.innerHTML = html; if (keep) $("sheetBody").scrollTop = y;
 }
-function showDetail(id) {
+function showDetail(id, pick) {
   if (Fresh.has(id)) { Fresh.clear(id); const fresh = sheetIn.querySelector('.card.isnew[data-card="' + id + '"]'); if (fresh) fresh.classList.remove("isnew"); }
   const d = $("alDetail"), c = CARD[id], m = S.meta, n = m.cards[id] || 0; if (!d) return;
   if (!n) {
     const cost = Core.CRAFT[c.rar], can = !c.ev && m.shards >= cost;
-    d.innerHTML = `<div class="card r${c.rar} locked">${lockedInner(c)}</div><div class="dt-body"><h4>Not found yet</h4><p class="dt-meta">${RAR[c.rar]}, ${SETS[c.set] || "Event robot"}</p><p class="note">${c.ev ? "Win the weekly event to get this robot. It is never in packs." : "This one is still hiding in a pack. You can also build it from " + cost + " shards (you have " + fmt(m.shards) + ")."}</p><div class="row">${can ? `<button class="btn pri" data-act="craft" data-id="${id}" type="button">Build for ${cost} shards</button>` : ""}<button class="btn" data-act="undetail" type="button">Close</button></div></div>`; d.hidden = false; return;
+    d.innerHTML = `<div class="card r${c.rar} locked">${lockedInner(c)}</div><div class="dt-body"><h4>Not found yet</h4><p class="dt-meta">${RAR[c.rar]}, ${SETS[c.set] || "Event robot"}</p><p class="note">${c.ev ? "Win the weekly event to get this robot. It is never in packs." : "This one is still hiding in a pack. You can also build it from " + cost + " shards (you have " + fmt(m.shards) + ")."}</p><div class="row">${can ? `<button class="btn pri" data-act="craft" data-id="${id}" type="button">Build for ${cost} shards</button>` : ""}<button class="btn" data-act="undetail" type="button">Close</button></div></div>`; d.classList.remove("picking"); d.hidden = false; return;
   }
   const lv = Core.level(n), pw = POW[c.pow], inCrew = m.crew.includes(id), full = m.crew.length >= 3;
   const next = lv < 3 ? (Core.LEVEL_AT[lv] - n) + " more for Level " + (lv + 1) + "." : "Top level.";
-  d.innerHTML = `<div class="card r${c.rar}">${cardInner(id, n)}</div><div class="dt-body"><h4>${c.name}</h4><p class="dt-meta">${RAR[c.rar]}, ${SETS[c.set] || "Event robot"}, Level ${lv}</p><p><b>${pw.n}.</b> ${Core.powerText(id, lv)}</p><p class="dt-chg">${Core.active(id) ? `<b>x${Core.charges(m, id)}</b> ${Core.charges(m, id) === 1 ? "charge" : "charges"} left. Each use spends one for good.` : `<b>Always on</b> while in your crew. No charges needed.`}</p><p class="note">${n} ${n === 1 ? "copy" : "copies"}. ${next}${Core.active(id) ? " Every repeat card adds " + Core.CHG_DUP + " charges." : ""}</p><div class="row">${inCrew ? `<button class="btn hot" data-act="drop" data-id="${id}" type="button">Take out of crew</button>` : full ? "" : `<button class="btn pri" data-act="add" data-id="${id}" type="button">Put in crew</button>`}<button class="btn" data-act="undetail" type="button">Close</button></div>${!inCrew && full ? `<p class="note">Your crew is full. Take a robot out first.</p>` : ""}</div>`;
-  d.hidden = false;
+  d.innerHTML = `<div class="card r${c.rar}">${cardInner(id, n)}</div><div class="dt-body"><h4>${c.name}</h4><p class="dt-meta">${RAR[c.rar]}, ${SETS[c.set] || "Event robot"}, Level ${lv}</p><p><b>${pw.n}.</b> ${Core.powerText(id, lv)}</p><p class="dt-chg">${Core.active(id) ? `<b>x${Core.charges(m, id)}</b> ${Core.charges(m, id) === 1 ? "charge" : "charges"} left. Each use spends one for good.` : `<b>Always on</b> while in your crew. No charges needed.`}</p><p class="note">${n} ${n === 1 ? "copy" : "copies"}. ${next}${Core.active(id) ? " Every repeat card adds " + Core.CHG_DUP + " charges." : ""}</p>${pick && !inCrew && full ? "" : `<div class="row">${inCrew ? `<button class="btn hot" data-act="drop" data-id="${id}" type="button">Remove from crew</button>` : `<button class="btn pri" data-act="${full ? "swap-pick" : "add"}" data-id="${id}" type="button">Put in crew</button>`}<button class="btn" data-act="undetail" type="button">Close</button></div>`}</div>${pick && !inCrew && full ? swapPicker(id) : ""}`;
+  d.classList.toggle("picking", !!(pick && !inCrew && full)); d.hidden = false; if (pick) { const p = $("dtSwap"); if (p) { const b = p.getBoundingClientRect(), s = $("sheetBody").getBoundingClientRect(); if (b.bottom > s.bottom || b.top < s.top) p.scrollIntoView({ block: "nearest" }); } }
+}
+// the crew is full: show who is in it, and let the player pick the one to swap out
+function swapPicker(id) {
+  const m = S.meta, c = CARD[id];
+  const rows = m.crew.map(x => { const o = CARD[x]; return `<button class="sw-bot" data-act="swap" data-id="${id}" data-out="${x}" type="button" aria-label="Swap ${o.name} out for ${c.name}"><span class="face">${bot(o)}</span><span><b>${o.name}</b><small>${POW[o.pow].n}</small></span><em>${Core.active(x) ? "x" + Core.charges(m, x) : "ON"}</em></button>`; }).join("");
+  return `<div class="dt-swap" id="dtSwap"><p>Your crew is full. Tap the robot to swap out for ${c.name}:</p><div class="sw-list">${rows}</div><div class="row"><button class="btn" data-act="swap-no" data-id="${id}" type="button">Cancel</button></div></div>`;
 }
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 function oddsTable() {
@@ -4513,6 +4758,9 @@ function sheetClick(e) {
   else if (a === "album") { clearTimeout(PK.t); PK.mode = "idle"; view = "album"; viewAlbum(); }
   else if (a === "undetail") $("alDetail").hidden = true;
   else if (a === "add" || a === "drop") { if (a === "add" ? addCrew(id) : dropCrew(id)) { save(); Sfx.pick(); viewAlbum(true); showDetail(id); } }
+  else if (a === "swap-pick") showDetail(id, true);
+  else if (a === "swap-no") showDetail(id);
+  else if (a === "swap") { const out = b.dataset.out; if (swapCrew(id, out)) { save(); Sfx.pick(); renderCrew(); viewAlbum(true); showDetail(id); toast(CARD[id].name + " is in your crew. " + CARD[out].name + " is out."); } }
   else if (a === "set") { S.meta[id] = !S.meta[id]; applySettings(); save(); b.setAttribute("aria-checked", S.meta[id]); b.lastElementChild.textContent = S.meta[id] ? "on" : "off"; if (id === "sound" && S.meta.sound) Sfx.pack(); if (id === "vib") vib(20); if (id === "lefty" || id === "calm" || id === "big") layout(); if (id === "season") { Season.apply(); save(); } }
   else if (a === "restart" || a === "wipe") menuAsk(a);
   else if (a === "ask-no") menuAsk("");
@@ -4531,7 +4779,7 @@ async function start(hot) {
   const now = Date.now(), saved = Store.load() || (hot && hot.meta ? hot : null);
   S.meta = Core.fixMeta(saved && saved.meta, now);
   S.base = saved && saved.base ? Core.fixMeta(saved.base, now) : null;
-  S.endless = S.run = Core.fixRun(saved && saved.run) || Core.newRun(S.meta);
+  S.endless = S.run = Core.fixRun(saved && saved.run) || Endless.newRun(S.meta);
   S.lrun = loadLevelRun(saved && saved.lrun);
   Analytics.load();
   $("app").insertAdjacentHTML("beforebegin", DEFS);
@@ -4604,7 +4852,7 @@ const HOWTO = [
   "Clears fill the pack meter. A full meter earns a pack of 3 robot cards.",
   "Put up to 3 robots in your crew. Each one gives you a power while you play.",
   "A free pack shows up every 12 hours. Up to 2 can wait for you.",
-  "Endless has no goal: keep going until none of your blocks fit."
+  "Endless has no goal: keep going until none of your blocks fit. Boost tiles drop in now and then. Ice and rock turn up from 2,000 points. From 20,000 points jammer blocks land, and nothing can remove those."
 ];
 const PITYNOTE = `Every pack has at least one Rare or better. If ${Core.PITY} packs in a row hold no Epic or Legend, the next pack is sure to have one.`;
 const TABS = [["levels", "Levels", "M6 21V4h11l-2.5 3.5L17 11H6"], ["album", "Album", "M4.5 8.5h10v11.500h-10zM8.500 8.500v-4h11v11.500h-5"], ["packs", "Packs", "M6 9h12v11H6zM6 9l2-4.500h8L18 9M12 9v11"],
@@ -4730,7 +4978,7 @@ function loadCode() {
   if (!pendingImport) return;
   const wasLevel = screen === "play" && mode === "level";
   S.meta = pendingImport; pendingImport = null; S.lrun = null; Fresh.clear(); applySettings();
-  S.endless = Core.newRun(S.meta); if (wasLevel) goHub("menu"); else S.run = S.endless;
+  S.endless = Endless.newRun(S.meta); if (wasLevel) goHub("menu"); else S.run = S.endless;
   save(); renderHub(); if (screen === "play") { closeSheet(); } else viewMenu();
   toast("Save loaded.");
 }
@@ -4799,6 +5047,16 @@ const Tiles = (() => {
     5: g => { block(g, ["#C99A6C", "#84552E", "#3C2412"]); g.fillStyle = INK; [[28, 28], [84, 28], [28, 84], [84, 84]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 5.5, 0, 7); g.fill(); }); g.fillStyle = "#E8C9A0"; [[27, 27], [83, 27], [27, 83], [83, 83]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2.6, 0, 7); g.fill(); }); g.strokeStyle = "rgba(30,14,4,.55)"; g.lineWidth = 6; g.lineCap = "round"; g.beginPath(); g.moveTo(42, 44); g.lineTo(70, 70); g.moveTo(70, 44); g.lineTo(42, 70); g.stroke(); },
     6: g => { item(g); ink(g, () => { g.arc(44, 46, 11, 0, 7); g.moveTo(52, 54); g.lineTo(78, 80); g.moveTo(68, 70); g.lineTo(60, 78); g.moveTo(76, 78); g.lineTo(68, 86); }); gold(g); },
     7: g => { item(g); ink(g, () => { g.moveTo(30, 76); g.lineTo(26, 40); g.lineTo(43, 56); g.lineTo(56, 32); g.lineTo(69, 56); g.lineTo(86, 40); g.lineTo(82, 76); g.closePath(); }, "#FFD35C"); gold(g); },
+    // the jammer block (Endless, from 20,000 points): dark riveted steel in a yellow-and-black warning frame with a padlock. Nothing like ice (pale blue) or rock (grey).
+    9: g => {
+      block(g, ["#55506E", "#2B2842", "#0E0C1A"]);
+      const box = (x, y, w, r) => { g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + w, r); g.arcTo(x + w, y + w, x, y + w, r); g.arcTo(x, y + w, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };   // (rr starts a new path each time; the frame needs two boxes in one)
+      g.save(); g.beginPath(); box(14, 14, 84, 14); box(28, 28, 56, 9); g.clip("evenodd"); g.fillStyle = "#FFC83D"; g.fillRect(10, 10, 92, 92); g.fillStyle = "#14101F";
+      for (let x = -100; x < 120; x += 24) { g.beginPath(); g.moveTo(x, 102); g.lineTo(x + 12, 102); g.lineTo(x + 104, 10); g.lineTo(x + 92, 10); g.closePath(); g.fill(); } g.restore();
+      rr(g, 14, 14, 84, 84, 14); g.lineWidth = 3; g.strokeStyle = INK; g.stroke(); rr(g, 28, 28, 56, 56, 9); g.fillStyle = grad(g, 28, 84, ["#3A3654", "#17142A"]); g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
+      g.lineCap = "round"; g.beginPath(); g.arc(56, 52, 9, Math.PI, 0); g.lineWidth = 9; g.strokeStyle = INK; g.stroke(); g.lineWidth = 4.5; g.strokeStyle = "#E9ECF5"; g.stroke();
+      rr(g, 43, 52, 26, 21, 4); g.fillStyle = "#E9ECF5"; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke(); g.fillStyle = INK; g.beginPath(); g.arc(56, 60, 3.2, 0, 7); g.fill(); g.fillRect(54.6, 60, 2.8, 7);
+    },
     8: g => { item(g); ink(g, () => { g.moveTo(40, 36); g.lineTo(72, 36); g.lineTo(86, 52); g.lineTo(56, 86); g.lineTo(26, 52); g.closePath(); g.moveTo(26, 52); g.lineTo(86, 52); g.moveTo(40, 36); g.lineTo(56, 86); g.lineTo(72, 36); }, "#7FE3FF"); },
     10: g => { orb(g, ["#FFB3B3", "#F03A4E", "#7A0A1E"]); g.fillStyle = "#1B1238"; g.beginPath(); g.arc(52, 62, 19, 0, 7); g.fill(); g.lineWidth = 3.5; g.strokeStyle = "#fff"; g.stroke(); g.beginPath(); g.moveTo(63, 47); g.quadraticCurveTo(70, 36, 80, 38); g.lineWidth = 5; g.lineCap = "round"; g.stroke(); g.fillStyle = "#FFE27A"; star(g, 82, 36, 9); g.fillStyle = "rgba(255,255,255,.7)"; g.beginPath(); g.arc(45, 55, 5, 0, 7); g.fill(); },
     11: g => { orb(g, ["#D5F6FF", "#2FB8FF", "#0B4FA8"]); ink(g, () => { arrow(g, 56, 56, 26, 56); arrow(g, 56, 56, 86, 56); }); shine(g); },
@@ -5383,7 +5641,7 @@ function robotHelp(r) {
 function robotRescue(r) {
   if (!r || !r.crew || (r.lv && r.lv.jam)) return [];
   const g = r.grid, tray = r.tray.filter(Boolean), kd = r.kind || null; let fill = 0, hittable = 0;
-  for (let i = 0; i < 64; i++) if (g[i]) { fill++; if (!(kd && Camp.isItem(kd[i]))) hittable++; }
+  for (let i = 0; i < 64; i++) if (g[i]) { fill++; if (!(kd && (Camp.isItem(kd[i]) || kd[i] === Camp.K.JAM))) hittable++; }   // keys, crowns, jewels and jammer blocks cannot be hit
   const turned = p => { let k = p.k; for (let t = 0; t < 3; t++) { k = Core.rotate(k); if (Core.anyFit(g, k)) return true; } return false; };
   const out = [];
   r.crew.forEach((e, i) => {
@@ -5492,25 +5750,147 @@ function showCrewTip(i) {
   document.body.appendChild(el); const w = el.offsetWidth; el.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, q.left + q.width / 2 - w / 2)) + "px"; el.style.bottom = (window.innerHeight - q.top + 10) + "px"; RB.ctip = el;
 }
 // ---- "What's new": a short note on the menu, with a dot until it has been read ----
-const NEWS = { key: "new14", title: "What's new", items: [
-  ["450 new levels", "The campaign now runs to level 600: 30 new worlds beyond the Star Forge, each with its own look. Levels 1 to 150 and your stars are exactly as they were."],
-  ["45 new bosses", "Every new boss mixes two special rules at once, like Frozen Mirror and Falling Giants."],
-  ["Old boss rules come back", "From World 16 on, Gravity, Mirror, Giants and the rest turn up on ordinary levels. A card names the rule before you start."],
-  ["New shapes", "Arrow, crown, bolt, ladder and more, in gems, stone and ice."],
-  ["Open all packs", "With two or more packs waiting, one tap on the Packs tab opens them all."]] };
+const NEWS = { key: "new15", title: "What's new", items: [
+  ["Boost tiles in Endless", "Every now and then a boost tile drops onto the Endless board. Clear a line through it to set it off."],
+  ["Ice and rock in Endless", "From 2,000 points, ice and rock start to turn up. Rarely at first, more often as your score climbs. They break just as they do in the levels."],
+  ["Jammer blocks", "From 20,000 points, jammer blocks land. Nothing can remove one, but lines through it still clear."],
+  ["Continue", "Lost an Endless run? A paid Continue clears the board once and keeps your score. It opens in the Google Play version."],
+  ["Swap robots in the album", "Tap a robot, then Put in crew. If your crew is full, pick who to swap out."]] };
 const newsUnread = () => !S.meta.seen.includes(NEWS.key);
 function showNews() {
   showPop(`<div class="panel news"><h2>${NEWS.title}</h2><p class="note">Version ${esc(GAME.version)}</p><ul class="newslist">${NEWS.items.map(([h1, t]) => `<li><b>${esc(h1)}</b><span>${esc(t)}</span></li>`).join("")}</ul><div class="row"><button class="btn pri" data-act="pop-close" type="button">Got it</button></div></div>`);
   if (newsUnread()) { Core.secret(S.meta, NEWS.key); save(); const b = document.querySelector(".whatsnew"); if (b) b.classList.remove("unread"); }
 }
 function robotsStart() {
-  popEl.addEventListener("click", robotPopClick);
+  popEl.addEventListener("click", robotPopClick); endlessInit();
   crewEl.addEventListener("pointerdown", e => { const b = e.target.closest(".cslot"); clearTimeout(RB.holdT); RB.held = false; if (!b || b.classList.contains("empty")) return; const i = +b.dataset.i; RB.holdT = setTimeout(() => { RB.held = true; showCrewTip(i); Haptic.play("tap"); }, 450); });
   const up = () => { clearTimeout(RB.holdT); if (RB.ctip) RB.ctipT = setTimeout(hideCrewTip, 1800); };
   crewEl.addEventListener("pointerup", up); crewEl.addEventListener("pointercancel", up); crewEl.addEventListener("pointerleave", up);
   crewEl.addEventListener("contextmenu", e => e.preventDefault());
   document.addEventListener("pointerdown", e => { hideRobotHand(); if (RB.tip && !e.target.closest("#rtip") && !e.target.closest(".cslot")) hideRobotTip(); if (RB.ctip && !e.target.closest(".cslot")) hideCrewTip(); }, true);
   setInterval(robotTick, 1000);
+}
+// ================= Endless mode on screen (v1.5): things that land, their tip cards, and the paid Continue =================
+// The rules are in camp.js (Camp.Endless). This file only shows them.
+const ETIP = {
+  boost: ["e:boost", "A boost tile dropped in", "Round glowing tiles are boosts. Clear a line through one to set it off. They drop in every now and then."],
+  4: ["e:ice", "Ice", "Ice never fills a line, so its row and column stay stuck. Clear a line right next to it to break it."],
+  2: ["e:rock", "Rock", "Rock takes two clears: the first cracks it, the second breaks it."],
+  9: ["e:jam", "Jammer block", "A jammer block can never be removed. No line, robot or boost tile gets rid of it. Lines through it still clear: everything else goes and the jammer stays."]
+};
+const EX = { tipT: 0, busy: false, note: "" };
+// one tip card per kind of square, ever: the first time it lands
+function endlessTip(key, kind) {
+  const t = ETIP[key]; if (!t || S.meta.seen.includes(t[0])) return;
+  Core.secret(S.meta, t[0]); const r = S.run; let waits = 0;
+  const show = () => {
+    if (S.run !== r || r.over || screen !== "play" || !popEl.hidden || view || AdService.open) return;   // the moment has passed; the card is not owed again
+    if (drag && waits++ < 20) { EX.tipT = setTimeout(show, 300); return; }   // never snatch a block out of the player's hand: wait until it is put down
+    if (drag) dragEnd(); if (picked != null) setPicked(null);
+    showPop(`<div class="panel tip etip"><span class="etip-pic" style="background-image:var(--k${kind})" aria-hidden="true"></span><h2>${esc(t[1])}</h2><p>${esc(t[2])}</p><div class="row"><button class="btn pri" data-act="pop-close" type="button">Got it</button></div></div>`);
+    Sfx.ui("pop");
+  };
+  clearTimeout(EX.tipT); EX.tipT = setTimeout(show, reduced ? 60 : 650);
+}
+// what landed after a block: drop it in, make its sound, and explain it the first time
+function endlessFx(fx) {
+  for (const f of fx) {
+    // the square may be one that was cleared a moment ago and is still bursting: the new arrival is drawn, and drops in, once that is over
+    const c = cells[f[1]], i = f[1], r = S.run, land = () => { if (S.run !== r) return; if (c.classList.contains("clr")) return setTimeout(land, 60); cellNow(i); again(c, "dropin"); }; setTimeout(land, 0);
+    if (f[0] === "drop") { Sfx.pack(); endlessTip("boost", f[2]); }
+    else if (f[0] === "hard") { Sfx.crack(); endlessTip(f[2], f[2]); }
+    else if (f[0] === "jam") { Sfx.bad(); Haptic.play("clear"); floatText("Jammer block!", f[1], "shout"); endlessTip(9, 9); }
+  }
+}
+// the ghost under a dragged block: where it lands and what it would clear (ice, rock and boost tiles included)
+function endlessPreview(p, r, c) {
+  const st = { grid: S.run.grid.slice(), kind: Endless.ready(S.run).kind.slice() }, out = Camp.newOut();
+  Camp.drop(st, p.k, r, c, p.c, out, null);
+  return { placed: out.placed, cleared: out.removed.concat(out.cracked) };
+}
+// ---- one block in Endless ----
+function endlessPlace(i, r0, c0) {
+  const r = S.run, ev = Endless.move(r, S.meta, i, r0, c0); if (!ev) return false;
+  const res = ev.res, at = res.placed[0], out = ev.out;
+  paint(res.mid, res.placed, res.midK); Sfx.place(res.placed.length, res.mid[at]); Haptic.play("place");
+  if (ev.L) {
+    wipe(res.cleared, at, 1 + (ev.L - 1) * .35 + Math.min(4, ev.streak - 1) * .12); zap(res.rows.concat(out.zrows), res.cols.concat(out.zcols)); sparksToMeter(res.cleared); Sfx.clear(ev.LT, ev.streak); Haptic.play(ev.LT > 1 ? "combo" : "clear"); if (document.body.classList.contains("danger")) Core.secret(S.meta, "s:close");
+    floatText("+" + fmt(ev.gain), at);
+    const shout = ev.perfect ? "Clean sweep!" : ev.LT >= 2 ? ["", "", "Double!", "Triple!", "Blazing!", "Blazing!"][Math.min(ev.LT, 5)] : ev.streak >= 2 && !out.boosts.length ? "Streak ×" + ev.mult + "!" : "";
+    if (shout) floatText(shout, at, "shout");
+    if (ev.LT >= 2 || ev.streak >= 3) { chatter(0); Bots.mood("cheer"); }
+    boardFx(ev.LT >= 2 ? "shake" : "shake1");
+    if (ev.LT >= 2 || ev.streak >= 3 || ev.perfect) Fx.flash(Math.min(.5, .1 + ev.LT * .1 + ev.streak * .02));
+    if (S.meta.tut === 0) S.meta.tut = 1;
+  }
+  boostFx(out); if (out.cracked.length) Sfx.crack();
+  if (ev.packs) { toast(ev.packs > 1 ? ev.packs + " packs earned. Tap the pack to open them." : "Pack earned. Tap the pack to open it."); Sfx.pack(); again(meterEl, "flash"); again(btnPacks, "win"); if (!reduced) { const pb = btnPacks.getBoundingClientRect(); Fx.burst(pb.left + pb.width / 2, pb.top + pb.height / 2, 16, ["#fff", "#FFD35C"], 260); } if (S.meta.tut < 2) S.meta.tut = 2; }
+  if (out.boosts.length || out.cracked.length || ev.fx.length) paint(r.grid);   // cracked rock, squares a boost took, and whatever just landed
+  endlessFx(ev.fx);
+  renderTray(ev.dealt); if (ev.dealt && !ev.L) Sfx.deal(); renderHud(); renderHint(); afterAction(); save();
+  return true;
+}
+// a robot power on the Endless board
+function endlessPower(r, c) {
+  const run = S.run, type = armed.type, at = r * N + c, res = Endless.power(run, S.meta, armed.i, r, c);
+  if (!res) return flashHint(run.kind && run.kind[at] === Camp.K.JAM ? "A jammer block can never be removed. Pick another spot." : "Nothing there to hit. Pick a spot with blocks.");
+  armed = null; boardEl.classList.remove("armed");
+  wipe(res.hit, at); zap(type === "row" || type === "cross" ? [r] : [], type === "col" || type === "cross" ? [c] : []); Sfx.power(); vib(15); if (res.gain) floatText("+" + res.gain, at);
+  boostFx(res.out); if (res.out.cracked.length) Sfx.crack();
+  if (res.packs) { toast(res.packs > 1 ? res.packs + " packs earned." : "Pack earned."); Sfx.pack(); again(meterEl, "flash"); }
+  paint(run.grid); renderCrew(); renderHud(); renderHint(); afterAction(); save();
+}
+function endlessRevive() { const res = Endless.revive(S.run, S.meta); if (!res) return null; boostFx(res.out); paint(S.run.grid); renderHud(); return res.hit; }
+
+// ---- the paid Continue ----
+// After an Endless run is lost: pay once, the board is cleared (jammer blocks stay), the score stays, play on. Once per run.
+// The payment itself is Shop.buyCont (Google Play only). Where there is no store the button is shown switched off and says why.
+const contPrice = () => Shop.price(Core.CONT);
+// what the lost-run screen offers: "" nothing | "used" | "noroom" | "paid" (a Continue is already paid for) | "buy" | "closed" (no store here) | "wait"
+function contState(r) {
+  if (!r || r.lv || !r.over) return "";
+  if (r.cont) return "used";
+  if (!Endless.room(r)) return "noroom";
+  if (S.meta.cont > 0) return "paid";
+  if (!Core.CONT.on) return "";
+  if (Shop.state === "open") return Shop.items[Core.CONT.id] ? "buy" : "";
+  return Shop.state === "none" ? "" : Shop.state;   // closed or wait
+}
+function renderCont() {
+  const box = $("overCont"), r = S.run, st = contState(r); if (!box) return;
+  if (!st || st === "used") { box.hidden = true; box.textContent = ""; box.dataset.st = st; return; }
+  const price = esc(contPrice()), what = "Clears the board and keeps your score. Jammer blocks stay. Once per run.";
+  let html = "";
+  if (st === "noroom") html = `<p class="note" id="contNote" role="status">No Continue for this run: the jammer blocks have left too little room to keep playing. Nothing is charged.</p>`;
+  else if (st === "paid") html = `<button class="btn pri cont" id="contBtn" data-act="cont-use" type="button"${EX.busy ? ` aria-disabled="true"` : ""}><b>Continue</b><small>Already paid for</small></button><p class="note" id="contNote" role="status">${esc(EX.note) || what}</p>`;
+  else if (st === "buy") html = `<button class="btn pri cont" id="contBtn" data-act="cont-buy" type="button"${EX.busy ? ` aria-disabled="true"` : ""} aria-label="Continue for ${price}"><b>Continue</b><small>${price}</small></button><p class="note" id="contNote" role="status">${esc(EX.note) || what}</p>`;
+  else html = `<button class="btn cont off" id="contBtn" data-act="cont-closed" type="button" aria-disabled="true" aria-label="Continue for ${price}, not available here"><b>Continue</b><small>${price}</small></button><p class="note" id="contNote" role="status">${st === "wait" ? "Opening the shop…" : "Continue opens in the Google Play version of " + esc(GAME.name) + ". Nothing can be bought here."}</p>`;
+  if (box.dataset.st !== st && (st === "buy" || st === "paid")) { AdLog.add("continue", "shown"); Analytics.track("continue_offered", { paid: st === "paid" ? 1 : 0, score: r.score }); }
+  box.dataset.st = st; box.innerHTML = html; box.hidden = false;
+}
+// the Continue itself: only ever reached with a Continue in the save's bank (bought just now, or paid for earlier)
+function continueRun() {
+  const r = S.endless; if (!r || r.lv || !r.over || r.cont || !Endless.room(r) || !Core.contUse(S.meta)) return false;
+  const was = r.grid.slice(), wasK = r.kind ? r.kind.slice() : null, cleared = Endless.cont(r, S.meta);
+  if (!cleared) { S.meta.cont++; return false; }   // could not be applied after all: the paid Continue goes back into the bank
+  AdLog.add("continue", "done"); Analytics.track("continue_used", { score: r.score });
+  EX.note = ""; EX.busy = false; armed = null; RB.offerKey = "";
+  if (S.run === r && screen === "play") {
+    $("over").hidden = true; paint(was, null, wasK); wipe(cleared, 27, 1.6); Fx.flash(.45); Sfx.power(); Haptic.play("combo"); boardFx("shake");
+    setTimeout(() => { if (S.run === r) renderAll(); }, reduced ? 0 : 520);
+    renderTray(true); renderCrew(); renderHud(); renderHint(); toast("Board cleared. Your score stays. Keep going!");
+  }
+  save(); return true;
+}
+async function contClick(a) {
+  if (a === "cont-closed") { const n = $("contNote"); if (n) again(n, "flash"); return; }
+  if (EX.busy) return;
+  if (a === "cont-use") { AdLog.add("continue", "taken"); if (!continueRun()) { EX.note = "That did not work. Your Continue is still saved."; renderCont(); } return; }
+  if (a === "cont-buy") { AdLog.add("continue", "taken"); Analytics.track("continue_tapped", { score: S.run.score }); await Shop.buyCont(); }
+}
+function endlessInit() {
+  $("over").addEventListener("click", e => { const b = e.target.closest("[data-act]"); if (b && /^cont-/.test(b.dataset.act)) contClick(b.dataset.act); });
+  Object.assign(ADNAME, { continue: "Endless: Continue (paid)" });
 }
 
 /* ================= scene.js: the robot workshop world =================
@@ -6063,7 +6443,7 @@ const LIVE0 = {
   version: 1, updated: "2026-11-11",
   daily: { pool: [16, 90], salt: 0 },                       // the daily challenge is picked from these levels; change salt to reshuffle every day's pick
   event: { levels: [60, 70, 90, 110, 120, 140], robots: ["comet", "gizmo", "aurora", "tempo"] },   // weekly event: its levels and the robot to win, in order
-  shop: { packs: [{ id: "packs_1", packs: 1, usd: .49 }, { id: "packs_5", packs: 5, usd: 1.99 }, { id: "packs_10", packs: 10, usd: 3.49 }], coins: { pack: 300, hints: 60 } },
+  shop: { packs: [{ id: "packs_1", packs: 1, usd: .49 }, { id: "packs_5", packs: 5, usd: 1.99 }, { id: "packs_10", packs: 10, usd: 3.49 }], coins: { pack: 300, hints: 60 }, cont: { id: "continue_1", usd: 1.99, on: true } },   // cont = the Endless Continue: its store product, the price shown where the store gives none, and on/off
   offers: [
     { id: "starter", on: true, title: "Starter bundle", text: "15 packs, 5 start boosts and a Rare robot", price: "$3.99" },
     { id: "noads", on: true, title: "Remove ads", text: "No ad breaks, and offers pay out at once", price: "$2.99" },
@@ -6090,7 +6470,7 @@ const Live = {
     const part = (k, test, take) => { if (c[k] === undefined) return; try { if (test(c[k])) take(c[k]); else bad.push(k); } catch (e) { bad.push(k); } };
     part("daily", d => Array.isArray(d.pool) && d.pool.length === 2 && lv(d.pool[0]) && lv(d.pool[1]) && d.pool[0] <= d.pool[1], d => { o.daily = { pool: d.pool.slice(), salt: isInt(d.salt) ? d.salt : 0 }; });
     part("event", e => Array.isArray(e.levels) && e.levels.length > 0 && e.levels.every(lv), e => { o.event.levels = e.levels.slice(0, 30); if (Array.isArray(e.robots) && e.robots.length && e.robots.every(id => Core.CARD[id] && Core.CARD[id].ev)) o.event.robots = e.robots.slice(); });
-    part("shop", s => Array.isArray(s.packs) && s.packs.length > 0 && s.packs.length <= 6 && s.packs.every(p => typeof p.id === "string" && /^[a-z0-9_]{1,24}$/.test(p.id) && isInt(p.packs) && p.packs > 0 && p.packs <= 100 && p.usd > 0), s => { o.shop.packs = s.packs.map(p => ({ id: p.id, packs: p.packs, usd: +p.usd })); if (s.coins && isInt(s.coins.pack) && s.coins.pack > 0 && isInt(s.coins.hints) && s.coins.hints > 0) o.shop.coins = { pack: s.coins.pack, hints: s.coins.hints }; });
+    part("shop", s => Array.isArray(s.packs) && s.packs.length > 0 && s.packs.length <= 6 && s.packs.every(p => typeof p.id === "string" && /^[a-z0-9_]{1,24}$/.test(p.id) && isInt(p.packs) && p.packs > 0 && p.packs <= 100 && p.usd > 0), s => { o.shop.packs = s.packs.map(p => ({ id: p.id, packs: p.packs, usd: +p.usd })); if (s.coins && isInt(s.coins.pack) && s.coins.pack > 0 && isInt(s.coins.hints) && s.coins.hints > 0) o.shop.coins = { pack: s.coins.pack, hints: s.coins.hints }; const ct = s.cont; if (ct && typeof ct === "object") { if (typeof ct.id === "string" && /^[a-z0-9_]{1,24}$/.test(ct.id)) o.shop.cont.id = ct.id; if (ct.usd > 0 && ct.usd < 1000) o.shop.cont.usd = +ct.usd; if (typeof ct.on === "boolean") o.shop.cont.on = ct.on; } });
     part("offers", a => Array.isArray(a) && a.every(x => x && typeof x.id === "string"), a => { for (const x of a) { const t = o.offers.find(y => y.id === x.id); if (!t) continue; if (typeof x.on === "boolean") t.on = x.on; for (const k of ["title", "text", "price"]) if (typeof x[k] === "string" && x[k].length <= 80) t[k] = x[k]; } });
     part("ads", a => typeof a === "object", a => { if (a.seconds >= 1 && a.seconds <= 60) o.ads.seconds = +a.seconds; if (isInt(a.interEvery) && a.interEvery >= 1) o.ads.interEvery = a.interEvery; if (lv(a.interMinLevel)) o.ads.interMinLevel = a.interMinLevel; if (typeof a.interstitials === "boolean") o.ads.interstitials = a.interstitials; });
     part("seasons", a => Array.isArray(a) && a.every(x => x && /^[a-z0-9-]{1,16}$/.test(x.id) && date(x.from) && date(x.to) && x.from <= x.to), a => { o.seasons = a.slice(0, 12).map(x => ({ id: x.id, name: String(x.name || x.id).slice(0, 24), from: x.from, to: x.to, tint: Array.isArray(x.tint) && x.tint.length === 4 && x.tint.every(Number.isFinite) ? [x.tint[0] & 255, x.tint[1] & 255, x.tint[2] & 255, Math.max(0, Math.min(.3, x.tint[3]))] : null, fx: ["dust", "spark", "snow", "bubble", "firefly", "twinkle", "rain"].includes(x.fx) ? x.fx : "", robot: Core.CARD[x.robot] && Core.CARD[x.robot].ev ? x.robot : "", blurb: String(x.blurb || "").slice(0, 80) })); });
@@ -6101,7 +6481,7 @@ const Live = {
   apply(o, how) {
     this.cfg = o; this.state = how; this.err = o.bad && o.bad.length ? "ignored: " + o.bad.join(", ") : "";
     Levels.live.pool = o.daily.pool; Levels.live.salt = o.daily.salt; Levels.live.event = o.event.levels;
-    Core.SHOP.splice(0, Core.SHOP.length, ...o.shop.packs); Core.PRICE.pack = o.shop.coins.pack; Core.PRICE.hints = o.shop.coins.hints;
+    Core.SHOP.splice(0, Core.SHOP.length, ...o.shop.packs); Object.assign(Core.CONT, o.shop.cont); Core.PRICE.pack = o.shop.coins.pack; Core.PRICE.hints = o.shop.coins.hints;
     Object.assign(AdService.cfg, o.ads);
     if (S.meta) Season.apply();
   },
@@ -6314,7 +6694,7 @@ function afterBoot() {
   document.addEventListener("focusin", e => { if (e.target.matches && e.target.matches("input,textarea")) setTimeout(() => { try { e.target.scrollIntoView({ block: "center" }); } catch (x) {} }, 250); });
   window.addEventListener("pagehide", () => { Analytics.sessionEnd(); });
 }
-window.__ps = { ready: false, S, Core, Camp, Levels, LV, Scene, Bots, GAME, Skin, Pics, Music, Radio, musicTrack, Splash, Safe, Analytics, Ach, Haptic, First, Live, Season, Perf, Offline, Store, AdService, AdLog, musicMode, feel, boardFx, goalSentence, robotHelp, robotRescue, RB, robotTick, offerRobots, showGetMore, chgSay, crewTap, Hub: { goHub, goPlay, tab: openSheet, start: startLevel, state: () => ({ screen, mode, view, pop: !popEl.hidden }) }, Cloud, Shop, Sfx, Fx, Gems, Fresh, save, bot, cardInner, place: doPlace, open: openSheet, close: closeSheet, redraw: () => renderAll(), check: () => afterAction(), hint: () => { renderHint(); return $("hint").textContent; }, uiRole, showNews, Out };
+window.__ps = { ready: false, S, Core, Camp, Levels, LV, Scene, Bots, GAME, Skin, Pics, Music, Radio, musicTrack, Splash, Safe, Analytics, Ach, Haptic, First, Live, Season, Perf, Offline, Store, AdService, AdLog, musicMode, feel, boardFx, goalSentence, robotHelp, robotRescue, RB, robotTick, offerRobots, showGetMore, chgSay, crewTap, Hub: { goHub, goPlay, tab: openSheet, start: startLevel, state: () => ({ screen, mode, view, pop: !popEl.hidden }) }, Cloud, Shop, Sfx, Fx, Gems, Fresh, save, bot, cardInner, place: doPlace, disarm, newRun, endRun, Endless, Shop, EX, contState, continueRun, renderCont, open: openSheet, close: closeSheet, redraw: () => renderAll(), check: () => afterAction(), hint: () => { renderHint(); return $("hint").textContent; }, uiRole, showNews, Out };
 try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ meta: S.meta, run: S.endless, base: S.base, lrun: S.lrun })); } catch (_) {}
 const hotApi = window.claude && window.claude.hot;
 const go = d => start(d || {}).catch(e => Splash.fail(e));
