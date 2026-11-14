@@ -1423,6 +1423,7 @@ body.lowfx.danger::after{animation:none;opacity:.7}
 /* the legendary shimmer is repainted by the page on every frame, so it rests while cards are coming out of a pack */
 .app .rv .card.r3 .card-front{animation:none}
 .pkopen .scene *{animation-play-state:paused!important}
+.pack{will-change:transform,opacity}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -1492,7 +1493,7 @@ const GAME = {
   name: "Pack Stack",              // the working title: shown on the splash, the home sign, About, and the home-screen icon label
   logo: ["PACK", "STACK"],         // the wordmark, one word per line
   tagline: "Robot workshop puzzles",
-  version: "1.6.2",
+  version: "1.6.3",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "packstacksupport@gmail.com",  // the public support address (store page, About page, privacy policy)
   credits: [["Game design and direction", "Murfer"], ["Code and art", "Built with Claude"], ["Music", "Bouncy, Chill and Epic styles: written in code for this game. Lo-fi style: recorded tracks by HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
@@ -4443,9 +4444,9 @@ function bot(c) {
 }
 // what a card shows after its power's name: the charges this robot has left (always-on robots show what they do instead)
 const chgLabel = (id, lv) => (Core.active(id) && S.meta.cards[id] > 0 ? "x" + Core.charges(S.meta, id) : Core.active(id) ? "x" + Core.CHG_NEW : Core.useText(id, lv));
-function cardInner(id, count, flip) {
+function cardInner(id, count, flip, small) {   // small: a card shown small (album grid, pack cards) may use the ready-made robot picture
   const c = CARD[id], lv = Math.max(1, Core.level(count));
-  const front = `<span class="card-front"><span class="pane s${c.set}"><span class="rar">${RAR[c.rar]}</span><span class="lv">${"<i></i>".repeat(lv)}</span><span class="art">${flip && Bots.pic(id) || bot(c)}</span><b class="nm">${c.name}</b><span class="pw">${POW[c.pow].s} <em>${chgLabel(id, lv)}</em></span></span></span>`;
+  const front = `<span class="card-front"><span class="pane s${c.set}"><span class="rar">${RAR[c.rar]}</span><span class="lv">${"<i></i>".repeat(lv)}</span><span class="art">${(flip || small) && Bots.pic(id) || bot(c)}</span><b class="nm">${c.name}</b><span class="pw">${POW[c.pow].s} <em>${chgLabel(id, lv)}</em></span></span></span>`;
   return flip ? `<span class="card-in">${front}<span class="card-back">PS</span></span>` : front;
 }
 const lockedInner = c => `<span class="card-front"><span class="pane"><span class="rar">${RAR[c.rar]}</span><span class="q">?</span></span></span>`;
@@ -4756,6 +4757,7 @@ function openSheet(name) {
   if (isTab(name) || !view) NAV.length = 0; else if (view !== name && !navBack) NAV.push(view);
   navBack = false; const changed = view !== name;
   view = name; sheetEl.hidden = false; sheetEl.classList.toggle("docked", screen === "hub"); sheetEl.dataset.view = name; Analytics.page(name);
+  if (screen === "play" && changed && (name === "menu" || name === "album")) Perf.watch(name === "menu" ? "Menu open" : "Album open");
   if (name === "packs") viewPacks(); else if (name === "album") viewAlbum(); else if (name === "shop") viewShop(); else if (name === "menu") viewMenu(); else hubView(name);
   if (changed) again(sheetIn, "viewin");
   if (screen === "hub") { markTab(name); renderHub(); return; }
@@ -4771,7 +4773,7 @@ const NAV = []; let navBack = false;
 const head = (title, extra) => `<div class="sheet-head"><h2>${title}${extra || ""}</h2>${screen === "hub" ? (isTab(view) || view === "shop" ? "" : `<button class="btn sm" data-act="close" type="button">Back</button>`) : `<button class="btn" data-act="close" type="button">${NAV.length ? "Back" : "Back to game"}</button>`}</div>`;
 function fmtDur(ms) { const m = Math.ceil(ms / 60000); if (m < 2) return "about a minute"; if (m < 60) return m + " min"; const hr = Math.floor(m / 60), mm = m % 60; return hr + "h" + (mm ? " " + mm + "m" : ""); }
 
-const packInner = () => `<span class="pack-top"></span><span class="pack-body"><span class="pack-band"></span><span class="pack-word">${GAME.logo.map(w => `<span>${esc(w)}</span>`).join("")}</span><span class="pack-face">${bot(CARD.bolt)}</span><span class="pack-sub">3 robot cards</span></span><span class="pack-bot"></span>`;
+const packInner = () => `<span class="pack-top"></span><span class="pack-body"><span class="pack-band"></span><span class="pack-word">${GAME.logo.map(w => `<span>${esc(w)}</span>`).join("")}</span><span class="pack-face">${Bots.pic("bolt") || bot(CARD.bolt)}</span><span class="pack-sub">3 robot cards</span></span><span class="pack-bot"></span>`;
 function viewPacks() {
   sheetIn.innerHTML = head("Robot packs") + `<div class="sheet-body" id="sheetBody"><div class="pk-stage" id="pkStage"></div><p class="pk-line" id="pkLine"></p><p class="pk-sub" id="pkSub"></p><div class="row" id="pkActs"></div><dl class="facts" id="pkFacts"></dl><div class="offers" id="pkOffers"></div><div class="row pk-more"><button class="btn sm" data-act="tab" data-id="odds" type="button">Pack odds</button></div></div>`;
   packIdle();
@@ -4812,6 +4814,7 @@ function dropCrew(id) {
 }
 function openPack() {
   if (PK.mode !== "idle" || !Core.takePack(S.meta, Date.now())) return;
+  Perf.watch("Pack tap");
   const got = Core.grant(S.meta, Core.rollPack(Math.random, S.meta.pity));
   got.joined = got.cards.filter(c => c.isNew && addCrew(c.id)).map(c => CARD[c.id].name);
   got.cards.forEach(c => { if (c.isNew) Fresh.add(c.id); });
@@ -4831,6 +4834,7 @@ let pkBusyT = 0;
 function pkBusy(on) { clearTimeout(pkBusyT); document.documentElement.classList.toggle("pkopen", !!on); if (on) pkBusyT = setTimeout(() => pkBusy(false), 9000); }
 function openAll() {
   const m = S.meta; if (PK.mode !== "idle" || Core.packsReady(m, Date.now()) < 1) return;
+  Perf.watch("Pack tap");
   const by = {}, sets = [], joined = []; let packs = 0, cards = 0, dust = 0, chg = 0, crewChg = 0, best = 0;
   while (packs < OPENALL_MAX && Core.takePack(m, Date.now())) {
     const got = Core.grant(m, Core.rollPack(Math.random, m.pity)); packs++;
@@ -4938,7 +4942,7 @@ function swapCrew(id, out) {
 }
 function tile(c) {
   const n = S.meta.cards[c.id] || 0;
-  return n ? `<button class="card r${c.rar}${S.meta.crew.includes(c.id) ? " crewed" : ""}${Fresh.has(c.id) ? " isnew" : ""}" data-card="${c.id}" type="button" aria-label="${c.name}, ${RAR[c.rar]}, ${n} ${n === 1 ? "copy" : "copies"}${Fresh.has(c.id) ? ", new" : ""}">${cardInner(c.id, n)}</button>`
+  return n ? `<button class="card r${c.rar}${S.meta.crew.includes(c.id) ? " crewed" : ""}${Fresh.has(c.id) ? " isnew" : ""}" data-card="${c.id}" type="button" aria-label="${c.name}, ${RAR[c.rar]}, ${n} ${n === 1 ? "copy" : "copies"}${Fresh.has(c.id) ? ", new" : ""}">${cardInner(c.id, n, false, true)}</button>`
     : `<button class="card r${c.rar} locked" data-card="${c.id}" type="button" aria-label="Not found yet, ${RAR[c.rar]}">${lockedInner(c)}</button>`;
 }
 function viewAlbum(keep) {
@@ -5020,7 +5024,7 @@ function viewMenu() {
     `<section class="mn"><h3>Your save</h3><p class="savedline" id="mnSaved" role="status"></p><div id="mnSaveErr"></div><p id="mnSave"></p><div class="row" id="mnSaveBtn"></div></section>` +
     `<section class="mn"><h3>Move to another phone</h3><p class="note">A save code holds your whole game as text. Copy it on the old phone and paste it on the new one.</p><div class="row"><button class="btn" data-act="export" type="button">Show my save code</button><button class="btn" data-act="import" type="button">Enter a code</button></div><div id="mnCode"></div></section>` +
     `<section class="mn"><h3>Start over</h3><div id="mnAsk"></div></section></div>`;
-  menuAsk(""); renderSave(); nowPlaying(); savedLine();
+  menuAsk(""); renderSave(); nowPlaying(); savedLine(); fillThumbs();
 }
 function menuAsk(kind) {
   const el = $("mnAsk"); if (!el) return;
@@ -6369,6 +6373,8 @@ const Scene = (() => {
     if (!thumbs.has(k)) { try { const w = big ? 300 : 150, h = big ? 420 : 210, p = paint(id, w, h, tod == null ? 2 : tod, 1), cv = document.createElement("canvas"); cv.width = w; cv.height = h; const g = cv.getContext("2d"); p.cvs.forEach(l => g.drawImage(l, -40, 0)); const px = g.getImageData(w >> 1, 1, 1, 1).data; tops.set(k, `rgb(${px[0]},${px[1]},${px[2]})`); thumbs.set(k, cv.toDataURL("image/jpeg", .74)); } catch (e) { thumbs.set(k, ""); tops.set(k, "#111C2E"); } }
     return thumbs.get(k);
   }
+  // the same picture only if it is already painted ("" if not): the Settings page shows these at once and fills the rest in a moment later
+  const thumbHave = (id, tod, big) => thumbs.get(id + (id === "workshop" ? (tod == null ? 2 : tod) : "") + (big ? "B" : "")) || "";
   const skyTop = (id, big) => { thumb(id, 2, big); return tops.get(id + (id === "workshop" ? 2 : "") + (big ? "B" : "")); };
   const PART = { dust: 12, spark: 12, snow: 14, bubble: 10, firefly: 9, twinkle: 12, rain: 14 };
   // the size of the screen is read once and again when it changes, never in the middle of a move (asking the browser for it there makes it stop and re-lay-out the page first)
@@ -6409,7 +6415,7 @@ const Scene = (() => {
   }
   let rs = 0; window.addEventListener("resize", () => { clearTimeout(rs); rs = setTimeout(() => { if (S.meta) apply(); }, 180); });
   document.addEventListener("visibilitychange", () => document.body.classList.toggle("asleep", document.hidden));
-  return { apply, season(fx) { seasonFx = fx || ""; if (S.meta) apply(); }, thumb, skyTop, unlocked, need, level, T, ORDER, WORLD, SETS, get key() { return key; }, count: () => ({ layers: host.querySelectorAll(".sc-l").length, parts: host.querySelectorAll(".sc-p").length, gears: host.querySelectorAll(".sc-gear").length, glows: host.querySelectorAll(".sc-glow").length }) };
+  return { apply, season(fx) { seasonFx = fx || ""; if (S.meta) apply(); }, thumb, thumbHave, skyTop, unlocked, need, level, T, ORDER, WORLD, SETS, get key() { return key; }, count: () => ({ layers: host.querySelectorAll(".sc-l").length, parts: host.querySelectorAll(".sc-p").length, gears: host.querySelectorAll(".sc-gear").length, glows: host.querySelectorAll(".sc-glow").length }) };
 })();
 
 /* ---- the little robots: around the edges of the home screen, and peeking over the board while you play ----
@@ -6419,7 +6425,7 @@ const Bots = (() => {
   // A robot drawn as lines and gradients has to be worked out again every time it is painted, and a pack opening paints two dozen of them
   // while they fly and flip. So each robot is also kept as a ready-made picture (drawn once, a moment after the game starts, a few at a time),
   // and the small places that show robots while things move (cards coming out of a pack, the crew row, the chat bubble) use that picture.
-  const pix = new Map(), pixBusy = new Set(), PIX = 256; let pixQ = [], pixT = 0;
+  const pix = new Map(), pixBusy = new Set(), PIX = 320; let pixQ = [], pixT = 0, pixWant = [], pixLast = 0, thumbQ = null;
   function pixMake(id) {
     if (pix.has(id) || pixBusy.has(id) || !Core.CARD[id]) return; pixBusy.add(id);
     const fail = () => pixBusy.delete(id);
@@ -6433,10 +6439,27 @@ const Bots = (() => {
       im.src = "data:image/svg+xml," + encodeURIComponent(bot(Core.CARD[id]).replace("<svg ", `<svg xmlns="http://www.w3.org/2000/svg" width="${PIX}" height="${PIX}" `).replace(">", ">" + DEFS_IN));
     } catch (e) { fail(); }
   }
-  // the ready-made picture of a robot as page code, or "" while it is not drawn yet (the caller then uses the line drawing)
-  function pic(id) { const p = pix.get(id); if (!p) { pixMake(id); return ""; } return `<img class="botpic" src="${p.url}" alt="" draggable="false">`; }
-  // draw them all in the background, two at a time, and never while a level or a run is being played
-  function warmPics() { if (pixT) return; pixQ = Core.CARDS.map(c => c.id).filter(id => !pix.has(id)); const go = () => { pixT = 0; if (!pixQ.length) return; if (typeof screen === "undefined" || screen !== "play") { pixMake(pixQ.shift()); if (pixQ.length) pixMake(pixQ.shift()); } pixT = setTimeout(go, 120); }; pixT = setTimeout(go, 1500); }
+  // the ready-made picture of a robot as page code, or "" while it is not drawn yet (the caller then uses the line drawing, and this robot moves to the front of the queue)
+  function pic(id) { const p = pix.get(id); if (!p) { if (!pixBusy.has(id) && !pixWant.includes(id)) pixWant.push(id); return ""; } return `<img class="botpic" src="${p.url}" alt="" draggable="false">`; }
+  // One small job every tenth of a second, in the background: first the robots somebody asked for, then all the others, then the theme pictures
+  // for Settings. While a level or a run is being played (and no page is open over it) only an asked-for robot is drawn, and only every half second.
+  function warmPics() {
+    if (pixT) return; pixQ = Core.CARDS.map(c => c.id);
+    const go = () => {
+      pixT = setTimeout(go, 100);
+      const playing = typeof screen !== "undefined" && screen === "play" && (typeof view === "undefined" || !view), now = Date.now();
+      while (pixWant.length && pix.has(pixWant[0])) pixWant.shift();
+      if (pixWant.length) { if (!playing || now - pixLast > 500) { pixLast = now; pixMake(pixWant.shift()); } return; }
+      if (playing) return;
+      while (pixQ.length && (pix.has(pixQ[0]) || pixBusy.has(pixQ[0]))) pixQ.shift();
+      if (pixQ.length) { pixMake(pixQ.shift()); return; }
+      if (!thumbQ) { let teasers = 0; thumbQ = Scene.ORDER.filter((id, i) => i < 15 || Scene.unlocked(id) || teasers++ < 2); }
+      while (thumbQ.length && Scene.thumbHave(thumbQ[0], S.meta.tod)) thumbQ.shift();
+      if (thumbQ.length) { try { Scene.thumb(thumbQ.shift(), S.meta.tod); } catch (e) {} return; }
+      clearTimeout(pixT); pixT = setTimeout(() => { thumbQ = null; go(); }, 4000);   // all done: look again now and then (a newly unlocked theme, a changed time of day)
+    };
+    pixT = setTimeout(go, 1500);
+  }
   function sprite(id, dark, px, dim) {
     const cv = document.createElement("canvas"); cv.width = cv.height = px || 112; cv.className = "bb-r";
     const draw = im => { try {
@@ -6547,12 +6570,21 @@ function viewHome() {
 }
 
 /* ---- Settings > Look: theme picker with previews, animation, robots, dimming, time of day ---- */
+// Painting a theme's little picture takes a moment, and the Settings page shows up to 45 of them. They used to be painted all at once in the
+// instant the page opened (a wait of a second or two the first time). Now the page opens at once and the pictures arrive one by one,
+// and they are also painted ahead of time in the background (Bots.warmPics does that after the robots).
+let thumbFillT = 0;
+function fillThumbs() {
+  clearTimeout(thumbFillT);
+  const step = () => { const el = document.querySelector("#sheet [data-lazy]"); if (!el) return; const id = el.dataset.lazy; el.removeAttribute("data-lazy"); try { el.style.backgroundImage = `url(${Scene.thumb(id, S.meta.tod, !!el.dataset.big)})`; } catch (e) {} thumbFillT = setTimeout(step, 30); };
+  thumbFillT = setTimeout(step, 180);
+}
 function lookSection() {
   const m = S.meta, an = m.bgAnim === 3 ? (reduced ? 1 : 0) : m.bgAnim;
   const seg = (key, opts, label, cur) => `<div class="seg" role="radiogroup" aria-label="${label}">${opts.map((t, i) => `<button class="segb" data-act="num" data-id="${key}" data-v="${i}" type="button" role="radio" aria-checked="${cur === i}">${t}</button>`).join("")}</div>`;
   const now = Scene.WORLD[Levels.world(Math.min(Levels.count, Core.nextLevel(m, Levels.count)))], shown = m.bgTheme > 0 && Scene.unlocked(Scene.ORDER[m.bgTheme - 1]) ? Scene.ORDER[m.bgTheme - 1] : now;
   let teasers = 0; const listed = Scene.ORDER.filter((id, i) => i < 15 || Scene.unlocked(id) || teasers++ < 2), more = Scene.ORDER.length - listed.length;
-  const tiles = Scene.ORDER.map((id, i) => { if (!listed.includes(id)) return ""; const open = Scene.unlocked(id); return `<button class="theme${open ? "" : " locked"}" data-act="${open ? "num" : "locked"}" data-id="bgTheme" data-v="${i + 1}" data-theme="${id}" type="button" role="radio" aria-checked="${m.bgTheme === i + 1}"${open ? "" : ' aria-disabled="true"'} aria-label="${Scene.T[id].n}${open ? "" : ", locked. " + Scene.need(id)}" style="background-image:url(${Scene.thumb(id, m.tod)})"><span>${Scene.T[id].n}</span>${open ? "" : `<small>${Scene.need(id)}</small>`}</button>`; }).join("");
+  const tiles = Scene.ORDER.map((id, i) => { if (!listed.includes(id)) return ""; const open = Scene.unlocked(id); return `<button class="theme${open ? "" : " locked"}" data-act="${open ? "num" : "locked"}" data-id="bgTheme" data-v="${i + 1}" data-theme="${id}" type="button" role="radio" aria-checked="${m.bgTheme === i + 1}"${open ? "" : ' aria-disabled="true"'} aria-label="${Scene.T[id].n}${open ? "" : ", locked. " + Scene.need(id)}" ${Scene.thumbHave(id, m.tod) ? `style="background-image:url(${Scene.thumbHave(id, m.tod)})"` : `data-lazy="${id}"`}><span>${Scene.T[id].n}</span>${open ? "" : `<small>${Scene.need(id)}</small>`}</button>`; }).join("");
   return `<section class="mn" id="mnLook"><h3>Look<span>${Scene.ORDER.filter(Scene.unlocked).length} of ${Scene.ORDER.length} themes unlocked</span></h3>` +
     `<p class="note">Background theme while you play. Clear a world or finish a robot set to unlock more.${more > 0 ? " " + more + " more looks wait in the worlds ahead." : ""}</p>` +
     `<div class="themes" role="radiogroup" aria-label="Background theme"><button class="theme auto" data-act="num" data-id="bgTheme" data-v="0" type="button" role="radio" aria-checked="${m.bgTheme === 0}"><span>Auto</span><small>Changes with the world</small></button>${tiles}</div>` +
@@ -6560,7 +6592,7 @@ function lookSection() {
     `<p class="note">Border robots</p>${seg("bots", ["On", "Reduced", "Off"], "Border robots", m.bots)}` +
     `<div class="sws"><button class="sw" data-act="set" data-id="botsCrew" type="button" role="switch" aria-checked="${!!m.botsCrew}"><span>Show only my crew</span><b>${m.botsCrew ? "on" : "off"}</b></button></div>` +
     `<label class="slide"><span>Dim the background in levels</span><output id="dimOut">${m.bgDim}%</output><input type="range" id="mnDim" data-id="bgDim" min="0" max="80" step="5" value="${m.bgDim}" aria-label="Background dimming in levels"></label>` +
-    `<div class="dimprev" id="dimPrev" style="background-image:url(${Scene.thumb(shown, m.tod, true)})" aria-hidden="true"><i style="opacity:${m.bgDim / 100}"></i><b></b></div>` +
+    `<div class="dimprev" id="dimPrev" ${Scene.thumbHave(shown, m.tod, true) ? `style="background-image:url(${Scene.thumbHave(shown, m.tod, true)})"` : `data-lazy="${shown}" data-big="1"`} aria-hidden="true"><i style="opacity:${m.bgDim / 100}"></i><b></b></div>` +
     `<p class="note">Menu scene time of day</p>${seg("tod", ["Dawn", "Day", "Dusk", "Night"], "Menu time of day", m.tod)}</section>`;
 }
 sheetEl.addEventListener("input", e => {
@@ -6975,6 +7007,10 @@ const Perf = {
     if (late >= 4 && late / n >= .2) this.bad++; else this.bad = Math.max(0, this.bad - 1);
     if (this.bad >= 2) { this.set(true, false, "burst"); try { localStorage.setItem("packstack.smooth", "1"); } catch (e) {} }
   },
+  // a few moments are timed whenever they happen (a pack being tapped, the first Menu or Album page over a game): how many frames the next
+  // 0.7 s drew, how many came late and the longest wait. The speed test page shows the first and the latest of each.
+  seen: {},
+  watch(label) { if (!label || this.off) return; Bench.gaps(700).then(g => { const late = g.filter(x => x > 34).length, txt = g.length + "/" + late + "/" + Math.round(Math.max(0, ...g)) + "ms"; const e = this.seen[label] || (this.seen[label] = { first: txt, n: 0 }); e.last = txt; e.n++; }).catch(() => {}); },
   sample() { if (this.off || document.hidden) return; let n = 0, t0 = 0; const tick = t => { if (!n) t0 = t; if (++n < 46) requestAnimationFrame(tick); else this.feed((t - t0) / 45); }; requestAnimationFrame(tick); },
   apply() { const mode = S.meta.lowp; if (mode === 1) this.set(true, true); else if (mode === 2) { this.set(false, true); try { localStorage.removeItem("packstack.smooth"); } catch (e) {} } else { let k = null; try { k = localStorage.getItem("packstack.smooth"); } catch (e) {} if ((k || APP && !Fx.gl()) && !this.off) this.set(true, true, "burst"); } },   // inside the app, Automatic starts light when the graphics chip cannot draw the effects: its built-in browser is slower than Chrome
   last: []
@@ -7008,6 +7044,7 @@ const Bench = {
       out.push("Screen " + Math.round(1000 / quiet.med) + " Hz, " + W + "x" + H + " @" + (devicePixelRatio || 1).toFixed(2) + ", effects drawn by " + (Fx.gl() ? "graphics chip (" + Fx.glInfo() + ")" : "plain canvas " + (fx ? fx.width + "x" + fx.height : "")));
       out.push((APP ? "App build " + (Native.info.build || "?") : "Web") + ", v" + GAME.version + ", engine " + (cv ? cv[1] : "?") + (/; wv\)/.test(ua) ? " WebView" : "") + ", light effects " + (Perf.on ? "ON (" + Perf.why + ")" : "off") + ", setting " + ["Automatic", "Always", "Never"][S.meta.lowp || 0]);
       out.push("Last bursts (frames/late): " + (Perf.last.join(" ") || "none yet"));
+      const seen = Object.entries(Perf.seen).map(([k, e]) => k + ": first " + e.first + (e.n > 1 ? ", latest " + e.last : "")).join(" | "); if (seen) out.push("Moments (frames/late/longest wait): " + seen);
     } catch (e) { out.push("Stopped: " + (e && e.message || e)); }
     box.remove(); this.busy = false; this.text = out.join("\n"); if (view === "menu") { const el = $("benchOut"); if (el) { el.hidden = false; el.textContent = this.text; try { el.scrollIntoView({ block: "center" }); } catch (e) {} } }
   }
