@@ -11,6 +11,9 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.view.accessibility.AccessibilityManager;
+import android.accessibilityservice.AccessibilityServiceInfo;
+import android.content.Context;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -29,6 +32,19 @@ public class MainActivity extends Activity {
     private WebView web;
     private Ads ads;
     private Billing billing;
+
+    /** Any helper app that uses Android's accessibility system (a password manager, a screen dimmer, an automation app) makes the
+     *  built-in browser describe every change on the page to it, which slows each line clear and pack opening a lot. Those helpers
+     *  have no use for a game board, so the page is only described when a screen reader (spoken or braille feedback, or
+     *  explore-by-touch) is really on. */
+    private void describePageOnlyToScreenReaders() {
+        try {
+            AccessibilityManager am = (AccessibilityManager) getSystemService(Context.ACCESSIBILITY_SERVICE);
+            boolean reader = am != null && am.isEnabled() && (am.isTouchExplorationEnabled()
+                    || !am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_SPOKEN | AccessibilityServiceInfo.FEEDBACK_BRAILLE).isEmpty());
+            web.setImportantForAccessibility(reader ? View.IMPORTANT_FOR_ACCESSIBILITY_AUTO : View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+        } catch (Throwable ignored) { }
+    }
 
     /** Phones with 90/120 Hz screens make a web page draw up to twice as many frames, and every big effect then misses some of them,
      *  which shows as stutter. A steady 60 frames a second looks smoother than a jumpy 120, and saves battery, so the game asks for 60. */
@@ -52,6 +68,7 @@ public class MainActivity extends Activity {
         steadyFrames();
         web = new WebView(this);
         web.setBackgroundColor(0xFF0B1220);
+        describePageOnlyToScreenReaders();
         web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);   // the game's page keeps top priority, even next to a hidden ad page
         // Keep the game inside the safe area. Android 15+ draws every app edge to edge, under the status bar, the camera hole
         // and the gesture bar. A WebView ignores its own padding, so the game sits inside a frame and the FRAME gets the padding:
@@ -137,7 +154,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onPause() { web.evaluateJavascript("try{if(window.__appPause)__appPause()}catch(e){}", null); super.onPause(); web.onPause(); }
-    @Override protected void onResume() { super.onResume(); web.onResume(); web.evaluateJavascript("try{if(window.__appResume)__appResume()}catch(e){}", null); }
+    @Override protected void onResume() { super.onResume(); describePageOnlyToScreenReaders(); web.onResume(); web.evaluateJavascript("try{if(window.__appResume)__appResume()}catch(e){}", null); }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); web.saveState(out); }
 
     /** Back closes the open page or pop-up, or goes from a level back to the map. Only on the Home screen does it leave the app. */

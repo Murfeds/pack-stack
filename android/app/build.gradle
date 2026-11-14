@@ -12,7 +12,7 @@ android {
         minSdk 26
         targetSdk 36
         versionCode (System.getenv('VERSION_CODE') ? System.getenv('VERSION_CODE').toInteger() : 1)
-        versionName '1.5.2'
+        versionName '1.5.3'
     }
     buildFeatures { buildConfig true }
     buildTypes {
