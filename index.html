@@ -4466,7 +4466,7 @@ function showOver() {
   renderCont();
   $("over").hidden = false;
 }
-function newRun() { armed = null; S.endless = Endless.newRun(S.meta); if (mode === "endless" || screen === "hub") S.run = S.endless; $("over").hidden = true; save(); renderAll(); }
+function newRun() { AdService.hold(); armed = null; S.endless = Endless.newRun(S.meta); if (mode === "endless" || screen === "hub") S.run = S.endless; $("over").hidden = true; save(); renderAll(); }
 
 // ---- robot powers ----
 function disarm() { if (!armed) return; armed = null; clearAim(); trayEl.classList.remove("target"); boardEl.classList.remove("armed"); renderCrew(); renderHint(); }
@@ -4915,10 +4915,10 @@ function goHub(tab) {
   if (drag) dragEnd(); disarm(); if (picked != null) setPicked(null); bankTime(true); pauseLevel(); clearHintMove();
   screen = "hub"; document.body.dataset.scr = "hub"; appEl.hidden = true; hubEl.hidden = false; $("over").hidden = true; closePop();
   S.run = S.endless; Ui.set({ scr: "hub" });
-  view = null; openSheet(tab || "home"); feel();
+  view = null; openSheet(tab || "home"); feel(); AdService.warm();
 }
 function goPlay(m) {
-  screen = "play"; mode = m; document.body.dataset.scr = "play"; document.body.dataset.mode = m;
+  AdService.hold(); screen = "play"; mode = m; document.body.dataset.scr = "play"; document.body.dataset.mode = m;
   hubEl.hidden = true; appEl.hidden = false; clearTimeout(PK.t); PK.mode = "idle"; if (view === "album") Fresh.clear();
   view = null; sheetEl.hidden = true; sheetEl.classList.remove("docked"); sheetIn.textContent = "";
   S.run = m === "level" ? S.lrun : S.endless; Ui.set({ scr: m === "level" ? "hub" : "endless" });
@@ -5410,7 +5410,11 @@ function popClick(e) {
 Object.assign(ADNAME, { fail_more: "Fail screen: more moves or time", fail_bomb: "Fail screen: bomb and continue", win_double: "Win screen: double reward", pack_free: "Packs: free pack", pack_skip: "Packs: skip the wait", start_boost: "Level start: boost tile", daily_chest: "Daily chest: bigger prize", between: "Break between levels" });
 const AdService = {
   cfg: { seconds: 3, interEvery: 3, interMinLevel: 10, interstitials: true },   // interstitials: only after every 3rd win, never in the first 10 levels
-  wins: 0, open: false, busy: false,
+  wins: 0, open: false, busy: false, warmAt: 0, held: false,
+  // In the Google Play app: ads are fetched only on menu and result screens (warm) and never while a level or Endless run is being
+  // played (hold). Fetching an ad starts a hidden ad page, and doing that mid-game made the board stutter.
+  warm() { if (!APP || !Native.ads || !this.ready()) return; const now = Date.now(); if (!this.held && now - this.warmAt < 4000) return; this.warmAt = now; this.held = false; Native.call("ads.prefetch").catch(() => {}); },
+  hold() { if (!APP || !Native.ads || this.held) return; this.held = true; Native.call("ads.hold").catch(() => {}); },
   ready: () => !!(S.meta && S.meta.ads),                                          // the master switch in Settings
   seen(place) { AdLog.add(place, "shown"); Analytics.track("ad_offered", { place }); },
   showRewarded(place) { AdLog.add(place, "taken"); Analytics.track("ad_accepted", { place }); return this.play(true).then(ok => { if (ok) { AdLog.add(place, "done"); Analytics.track("ad_finished", { place }); } return ok; }); },
@@ -5439,7 +5443,7 @@ const AdService = {
     });
   }
 };
-const offerBtn = (place, label, sub) => { AdService.seen(place); return `<button class="btn offer" data-act="ad" data-id="${place}" type="button"><i class="adico" aria-hidden="true"></i><span><b>${label}</b><small>${sub || "Watch an ad"}</small></span></button>`; };
+const offerBtn = (place, label, sub) => { AdService.seen(place); AdService.warm(); return `<button class="btn offer" data-act="ad" data-id="${place}" type="button"><i class="adico" aria-hidden="true"></i><span><b>${label}</b><small>${sub || "Watch an ad"}</small></span></button>`; };
 function maybeBreak(id) { const c = AdService.cfg; return AdService.ready() && c.interstitials && id > c.interMinLevel && AdService.wins > 0 && AdService.wins % c.interEvery === 0 ? AdService.showInterstitial() : Promise.resolve(); }
 async function takeOffer(place, btn) {
   if (AdService.busy) return; AdService.busy = true;

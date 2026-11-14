@@ -35,6 +35,7 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         web = new WebView(this);
         web.setBackgroundColor(0xFF0B1220);
+        web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false);   // the game's page keeps top priority, even next to a hidden ad page
         // Keep the game inside the safe area. Android 15+ draws every app edge to edge, under the status bar, the camera hole
         // and the gesture bar. A WebView ignores its own padding, so the game sits inside a frame and the FRAME gets the padding:
         // the game is pushed clear of the status bar / camera at the top and the gesture bar at the bottom, and the strips
@@ -96,6 +97,8 @@ public class MainActivity extends Activity {
                 try {
                     if ("ads.show".equals(op)) ads.show(id, arg);
                     else if ("ads.privacy".equals(op)) ads.privacy(id);
+                    else if ("ads.prefetch".equals(op)) { ads.prefetch(); reply(id, true, "{}"); }
+                    else if ("ads.hold".equals(op)) { ads.hold(); reply(id, true, "{}"); }
                     else if ("store.details".equals(op)) billing.details(id, arg);
                     else if ("store.buy".equals(op)) billing.buy(id, arg);
                     else if ("store.list".equals(op)) billing.list(id);
