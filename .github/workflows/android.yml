@@ -1,7 +1,7 @@
 name: Build Android app
 on:
   push:
-    branches: [main]
+    branches: [main, app-dev]
     paths: ['index.html', 'live.json', 'music/**', 'android/**', '.github/workflows/android.yml']
   workflow_dispatch:
 permissions:
@@ -32,6 +32,7 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk /tmp/out/pack-stack-test.apk
           echo "${{ github.run_number }}" > /tmp/out/version.txt
           git config user.name "github-actions"; git config user.email "actions@github.com"
-          git checkout --orphan android-builds; git rm -rfq .; cp /tmp/out/* .
+          OUT=android-builds; if [ "${{ github.ref_name }}" != "main" ]; then OUT=android-builds-dev; fi   # test builds from the app-dev branch never replace the public download
+          git checkout --orphan $OUT; git rm -rfq .; cp /tmp/out/* .
           git add pack-stack-unsigned.aab pack-stack-test.apk version.txt
-          git commit -qm "Android build ${{ github.run_number }}"; git push -f origin android-builds
+          git commit -qm "Android build ${{ github.run_number }}"; git push -f origin $OUT

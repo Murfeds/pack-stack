@@ -1,12 +1,14 @@
 package com.murfeds.packstack;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Insets;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -14,11 +16,16 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.window.OnBackInvokedDispatcher;
 import androidx.webkit.WebViewAssetLoader;
+import org.json.JSONObject;
 
 /** The whole game is one web page bundled inside the app. This screen shows it, keeps it clear of the camera notch and the gesture bar,
- *  sends the phone's Back button to the game, and tells the game when the app is put away so it saves and goes quiet. */
+ *  sends the phone's Back button to the game, and tells the game when the app is put away so it saves and goes quiet.
+ *  It also gives the page one object, PackStackNative, through which the game asks for real ads (Ads) and real purchases (Billing). */
 public class MainActivity extends Activity {
+    private static final String HOME = "appassets.androidplatform.net";
     private WebView web;
+    private Ads ads;
+    private Billing billing;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -54,11 +61,50 @@ public class MainActivity extends Activity {
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
                 return loader.shouldInterceptRequest(req.getUrl());
             }
+            // the game page never leaves the app: any other address opens in the phone's browser instead
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
+                if (HOME.equals(req.getUrl().getHost())) return false;
+                try { startActivity(new Intent(Intent.ACTION_VIEW, req.getUrl())); } catch (RuntimeException ignored) { }
+                return true;
+            }
         });
+        ads = new Ads(this);
+        billing = new Billing(this);
+        web.addJavascriptInterface(new Bridge(), "PackStackNative");
         // Android 13+ (and required on Android 16): the Back gesture comes through this callback instead of onBackPressed
         if (Build.VERSION.SDK_INT >= 33) getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::goBack);
         if (saved != null) web.restoreState(saved);
-        else web.loadUrl("https://appassets.androidplatform.net/assets/index.html");
+        else web.loadUrl("https://" + HOME + "/assets/index.html");
+        ads.start();
+    }
+
+    /** What the page can call. These arrive on a background thread, so every job is passed to the main thread first. */
+    private final class Bridge {
+        @JavascriptInterface public String info() { return "{\"app\":\"android\",\"ads\":true,\"store\":true,\"build\":\"" + BuildConfig.VERSION_CODE + "\"}"; }
+        @JavascriptInterface public void call(final String id, final String op, final String arg) {
+            runOnUiThread(() -> {
+                try {
+                    if ("ads.show".equals(op)) ads.show(id, arg);
+                    else if ("ads.privacy".equals(op)) ads.privacy(id);
+                    else if ("store.details".equals(op)) billing.details(id, arg);
+                    else if ("store.buy".equals(op)) billing.buy(id, arg);
+                    else if ("store.list".equals(op)) billing.list(id);
+                    else if ("store.consume".equals(op)) billing.consume(id, arg);
+                    else reply(id, false, "{\"name\":\"Error\",\"message\":\"unknown job\"}");
+                } catch (RuntimeException e) { reply(id, false, "{\"name\":\"Error\",\"message\":\"the app could not do that\"}"); }
+            });
+        }
+    }
+
+    /** Answer one job the page started (see src/native.js in the game). Safe to call from any thread. */
+    void reply(final String id, final boolean ok, final String json) {
+        runOnUiThread(() -> web.evaluateJavascript("window.__psNative&&__psNative.done(" + JSONObject.quote(id) + "," + ok + "," + JSONObject.quote(json) + ")", null));
+    }
+
+    /** A purchase finished outside the normal flow: the game asks Google Play for the list again and hands it over. */
+    void storeChanged() {
+        runOnUiThread(() -> web.evaluateJavascript("try{window.dispatchEvent(new Event('packstackstore'))}catch(e){}", null));
     }
 
     @Override protected void onPause() { web.evaluateJavascript("try{if(window.__appPause)__appPause()}catch(e){}", null); super.onPause(); web.onPause(); }

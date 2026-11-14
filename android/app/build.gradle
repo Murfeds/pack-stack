@@ -1,4 +1,9 @@
 plugins { id 'com.android.application' }
+
+// ad ids live in android/ads.properties (Google's test ids until the real ones are filled in)
+def adIds = new Properties()
+file("$rootDir/ads.properties").withInputStream { adIds.load(it) }
+
 android {
     namespace 'com.murfeds.packstack'
     compileSdk 36
@@ -7,12 +12,21 @@ android {
         minSdk 26
         targetSdk 36
         versionCode (System.getenv('VERSION_CODE') ? System.getenv('VERSION_CODE').toInteger() : 1)
-        versionName '1.0.' + (System.getenv('VERSION_CODE') ?: '1')
+        versionName '1.5.1'
+        manifestPlaceholders = [admobAppId: adIds.getProperty('ADMOB_APP_ID')]
+        buildConfigField 'String', 'AD_REWARDED', "\"${adIds.getProperty('AD_REWARDED')}\""
+        buildConfigField 'String', 'AD_INTERSTITIAL', "\"${adIds.getProperty('AD_INTERSTITIAL')}\""
     }
+    buildFeatures { buildConfig true }
     buildTypes {
         release { minifyEnabled false }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     androidResources { noCompress 'html' }
 }
-dependencies { implementation 'androidx.webkit:webkit:1.12.1' }
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'com.google.android.gms:play-services-ads:25.4.0'            // Google AdMob: rewarded ads and breaks between levels
+    implementation 'com.google.android.ump:user-messaging-platform:3.1.0'       // Google's consent screen (asked only where the law needs it)
+    implementation 'com.android.billingclient:billing:9.1.0'                    // Google Play Billing: packs and the Continue
+}
