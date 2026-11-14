@@ -1,0 +1,35 @@
+APP NAME (30 max)
+Pack Stack: Robot Block Puzzle
+
+SHORT DESCRIPTION (80 max)
+Stack gem blocks, clear lines and collect robot cards with real powers.
+
+FULL DESCRIPTION (4000 max)
+Pack Stack is a cozy block puzzle with a twist: every pack you open adds a robot to your crew, and every robot has a power.
+
+DROP, CLEAR, COLLECT
+• Drag gem blocks onto the 8x8 board and clear full rows and columns.
+• Win stars and coins, then rip open packs of robot cards.
+• Put three robots in your crew: smash a block, zap a row, swap your pieces and more.
+• 28 robots to collect, from Common to Legend.
+
+600 LEVELS, 40 WORLDS
+• Goals that keep changing: break ice and stone, collect items, build streaks, survive the junk.
+• 60 boss levels with rules of their own: gravity, mirrors, fog, giant blocks.
+• Three stars to earn on every level.
+
+ENDLESS MODE
+• Chase your best score. Boost tiles drop in, ice and rock creep up, and from 20,000 points the jammer blocks arrive.
+
+MADE TO BE FAIR
+• Every robot can be found just by playing.
+• Pack odds are shown in the game, right above the prices.
+• Rewarded ads are always your choice.
+• The puzzles work offline.
+
+MORE TO DO
+• A daily challenge, a daily chest and a weekly event with a special robot.
+• Achievements and seasons.
+• Four music styles, a left-handed layout and a reduced-motion option.
+
+Pack Stack contains ads and optional in-app purchases (packs of random robot cards, and a Continue for Endless mode).
