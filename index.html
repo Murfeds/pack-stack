@@ -1371,6 +1371,30 @@ textarea.code[readonly]{font:600 11.5px/1.4 ui-monospace,Menlo,Consolas,monospac
 body.lowfx.danger::after{animation:none;opacity:.7}
 .lowfx .tbar.low,.lowfx .lim b.low{animation:none}
 .fxon .scene *,.fxon .bots *{animation-play-state:paused!important}
+/* ---------- inside the Android app: its built-in browser draws brightness and glow filters far slower than Chrome does,
+   so the app plays the same moves with size and fade only (those are drawn by the graphics chip) ---------- */
+.app .cell.clr::before{animation-name:clr-lite}
+.app .cell.pop::before{animation-name:pop-lite}
+.app .pack,.app .stars3,.app .packbtn.has .mini-pack{filter:none}
+.app .pack.rip{animation:packshake-lite .32s linear,packburst-lite .25s .31s ease-in forwards}
+@keyframes packshake-lite{0%{transform:rotate(0) scale(1)}15%{transform:rotate(-5deg) scale(1.03)}32%{transform:rotate(5deg) scale(1.06)}50%{transform:rotate(-6deg) scale(1.08)}68%{transform:rotate(6deg) scale(1.1)}84%{transform:rotate(-4deg) scale(1.12)}100%{transform:rotate(0) scale(1.14)}}
+@keyframes packburst-lite{0%{transform:scale(1.14);opacity:1}100%{transform:scale(1.9);opacity:0}}
+.app .flip.shown,.app .flip.shown.r1,.app .flip.shown.r2,.app .flip.shown.r3{animation:none}
+.app .flip.shown .card-front::after{content:"";position:absolute;inset:-2px;z-index:4;border-radius:inherit;background:#fff;box-shadow:0 0 16px 5px var(--rc);opacity:0;pointer-events:none;animation:glow-lite .7s .12s ease-out backwards}
+.app .flip.shown.r2 .card-front::after{animation-duration:1s}
+.app .flip.shown.r3 .card-front::after{animation-duration:1.3s}
+@keyframes glow-lite{0%{opacity:.8}100%{opacity:0}}
+.app .stars3 i.on{animation-name:starpop-lite}
+@keyframes starpop-lite{0%{transform:scale(0) rotate(-40deg)}70%{transform:scale(1.25)}100%{transform:none}}
+.app .meter.sip,.app .meter.sip i,.app .meter.flash,.app .shop-ban.flash,.app .over-cont .note.flash{animation-name:sip-lite}
+@keyframes sip-lite{0%{transform:scale(1.07)}100%{transform:scale(1)}}
+.app .packbtn.win,.app .packbtn.win .mini-pack{animation-name:packwin-lite}
+@keyframes packwin-lite{0%{transform:scale(1)}25%{transform:scale(1.5) rotate(-12deg)}50%{transform:scale(1.15) rotate(10deg)}75%{transform:scale(1.3) rotate(-5deg)}100%{transform:scale(1)}}
+.app .node.cur .sh,.app .sp-lamp{animation:none}
+/* the graphics chip is drawing the bursts: the page's own gem is hidden the moment it is cleared, and the page-made flash stays off */
+#fxgl{position:fixed;inset:0;z-index:65;width:100%;height:100%;pointer-events:none}
+.gl .cell.clr.glc::before{animation:none;opacity:0}
+.gl #fx{display:none}
 </style>
 <div class="splash" id="splash" role="progressbar" aria-label="Loading Pack Stack" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><div class="sp-in">
   <svg class="sp-bot" viewBox="0 0 120 120" aria-hidden="true"><g class="sp-gear"><path d="M92 20l5 1 2 6 6 2 5-4 4 4-4 5 2 6 6 2v5l-6 2-2 6 4 5-4 4-5-4-6 2-2 6h-5l-2-6-6-2-5 4-4-4 4-5-2-6-6-2v-5l6-2 2-6-4-5 4-4 5 4 6-2z" fill="#8A5F1F"/><circle cx="94" cy="42" r="8" fill="#0B1220"/></g><g class="sp-head"><path d="M60 14v14" stroke="#C99A3C" stroke-width="5" stroke-linecap="round"/><circle class="sp-lamp" cx="60" cy="12" r="7" fill="#F2CF7A"/><rect x="24" y="30" width="72" height="60" rx="14" fill="#3A5C86" stroke="#070C16" stroke-width="5"/><rect x="33" y="40" width="54" height="30" rx="9" fill="#0B1220"/><g class="sp-eyes"><circle cx="48" cy="55" r="8" fill="#F8EBC4"/><circle cx="72" cy="55" r="8" fill="#F8EBC4"/></g><path d="M46 79h28" stroke="#070C16" stroke-width="5" stroke-linecap="round"/><rect x="14" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/><rect x="96" y="48" width="10" height="22" rx="4" fill="#C99A3C" stroke="#070C16" stroke-width="4"/></g></svg>
@@ -1440,7 +1464,7 @@ const GAME = {
   name: "Pack Stack",              // the working title: shown on the splash, the home sign, About, and the home-screen icon label
   logo: ["PACK", "STACK"],         // the wordmark, one word per line
   tagline: "Robot workshop puzzles",
-  version: "1.5.2",
+  version: "1.6.0",
   theme: "#111C2E",                // the colour phones use for the status bar and the launch screen
   contact: "packstacksupport@gmail.com",  // the public support address (store page, About page, privacy policy)
   credits: [["Game design and direction", "Murfer"], ["Code and art", "Built with Claude"], ["Music", "Bouncy, Chill and Epic styles: written in code for this game. Lo-fi style: recorded tracks by HoliznaCC0 (public domain, CC0)"], ["Typefaces", "Calistoga, Nunito"]]   // shown on the About page
@@ -3497,9 +3521,11 @@ window.addEventListener("online", () => { try { if (Radio.ok()) return; Radio._r
 // this page. If the page may not show such pictures, the first try fails quietly and everything stays in the long form.
 const Pics = {
   ok: null, seq: 0, last: new Map(), keep: new Map(), held: [], jobs: [], probe: null,
+  src: new Map(),   // the canvas each picture was painted on, for the graphics-chip painter (GLX)
   blobUrl(dataUrl) { const bin = atob(dataUrl.slice(dataUrl.indexOf(",") + 1)), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return URL.createObjectURL(new Blob([a], { type: "image/png" })); },
   load(url) { return new Promise(res => { const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = url; }); },
-  set(name, dataUrl) {
+  set(name, dataUrl, canvas) {
+    if (canvas) { this.src.set(name, canvas); try { GLX.changed(name); } catch (_) {} }
     document.documentElement.style.setProperty(name, `url(${dataUrl})`); const tag = ++this.seq; this.last.set(name, tag);
     if (this.ok === false) return;
     if (this.ok === null) { this.held.push([name, dataUrl, tag]); if (!this.probe) this.probe = this.test(dataUrl); return; }
@@ -3601,7 +3627,7 @@ const Gems = (() => {
   }
   function init() {
     const root = document.documentElement; let url = "";
-    for (let c = 1; c <= 7; c++) { try { cv[c] = paint(c); url = cv[c].toDataURL("image/png"); Pics.set("--g" + c, url); } catch (_) { url = ""; } }
+    for (let c = 1; c <= 7; c++) { try { cv[c] = paint(c); url = cv[c].toDataURL("image/png"); Pics.set("--g" + c, url, cv[c]); } catch (_) { url = ""; } }
     // if this browser will not paint or show the pictures, fall back to plain glossy stones so the game stays playable
     const plain = () => root.classList.add("nogem"); if (!url) return plain();
     const im = new Image(); im.onerror = plain; im.src = url;
@@ -3609,36 +3635,134 @@ const Gems = (() => {
   return { init, cv, PAL };
 })();
 
+// ---- the graphics-chip painter (WebGL) ----
+// Every burst of effects (shards, sparks, twinkles, coins, the flash and shrink of a cleared gem, the bars of light, the screen flash)
+// is drawn by the phone's graphics chip as small textured squares, all in one go per frame. That is how game engines draw, and it is
+// far lighter than asking the page itself to animate dozens of glowing pieces. All the small pictures live together on one sheet
+// (the "atlas"): the white shapes first, then gem and block pictures as they are needed.
+// If the chip is not available (or only a slow software stand-in is), init() says no and the older canvas painter in Fx carries on.
+const GLX = (() => {
+  const CELL = 128, COLS = 8, SIZE = CELL * COLS, PAD = 4, IN = CELL - 2 * PAD, MAXS = 1500, STRIDE = 9;
+  const SHAPES = ["dot", "disc", "tri", "hi", "star", "ring", "beam", "coin", "px"], TAU = Math.PI * 2;
+  let can = null, gl = null, prog = null, buf = null, tex = null, atlas = null, ag = null, uRes = null, W = 0, H = 0, n = 0, dirty = true, ok = false, onLost = null;
+  const V = new Float32Array(MAXS * 6 * STRIDE), slots = new Map(); let next = 0;
+  const VS = "attribute vec2 p;attribute vec2 t;attribute vec4 c;attribute float w;uniform vec2 res;varying vec2 vt;varying vec4 vc;varying float vw;void main(){vt=t;vc=c;vw=w;gl_Position=vec4(p.x/res.x*2.-1.,1.-p.y/res.y*2.,0.,1.);}";
+  const FS = "precision mediump float;uniform sampler2D s;varying vec2 vt;varying vec4 vc;varying float vw;void main(){vec4 k=texture2D(s,vt);k=mix(k,vec4(k.a),vw);gl_FragColor=k*vc;}";
+  const origin = i => [(i % COLS) * CELL, Math.floor(i / COLS) * CELL];
+  function shape(name, i) {
+    const [x, y] = origin(i), c = CELL / 2, g = ag; g.save(); g.translate(x, y); g.clearRect(0, 0, CELL, CELL); g.fillStyle = g.strokeStyle = "#fff";
+    const poly = pts => { g.beginPath(); pts.forEach(([px, py], k) => { const X = c + px * IN / 2, Y = c + py * IN / 2; if (k) g.lineTo(X, Y); else g.moveTo(X, Y); }); g.closePath(); g.fill(); };
+    if (name === "dot") { const q = g.createRadialGradient(c, c, 0, c, c, IN / 2); q.addColorStop(0, "rgba(255,255,255,1)"); q.addColorStop(.35, "rgba(255,255,255,.55)"); q.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = q; g.fillRect(PAD, PAD, IN, IN); }
+    else if (name === "disc") { g.beginPath(); g.arc(c, c, IN / 2 - 1, 0, TAU); g.fill(); }
+    else if (name === "tri") poly([[0, -1], [.75, .6], [-.65, .45]]);
+    else if (name === "hi") poly([[0, -1], [.2, .15], [-.65, .45]]);
+    else if (name === "star") { const pts = []; for (let k = 0; k < 8; k++) { const a = k * TAU / 8, r = k % 2 ? .26 : 1; pts.push([Math.cos(a) * r, Math.sin(a) * r]); } poly(pts); }
+    else if (name === "ring") { g.lineWidth = IN * .045; g.beginPath(); g.arc(c, c, IN / 2 - IN * .03, 0, TAU); g.stroke(); }
+    else if (name === "beam") { const q = g.createLinearGradient(PAD, 0, PAD + IN, 0); q.addColorStop(0, "rgba(255,255,255,0)"); q.addColorStop(.42, "rgba(255,255,255,.9)"); q.addColorStop(.5, "#fff"); q.addColorStop(.58, "rgba(255,255,255,.9)"); q.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = q; g.fillRect(0, 0, CELL, CELL); }
+    else if (name === "coin") { const o = (cx, cy, rx, ry, col) => { g.fillStyle = col; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, TAU); g.fill(); }; o(c, c + 7, IN / 2 - 4, IN / 2 - 8, "#8A5200"); o(c, c - 2, IN / 2 - 4, IN / 2 - 8, "#FFC83D"); o(c - IN * .12, c - IN * .16, IN * .18, IN * .14, "#FFF3B8"); }
+    else g.fillRect(0, 0, CELL, CELL);
+    g.restore();
+  }
+  // a picture (a gem or a block) gets its own square on the sheet the first time it is asked for
+  function slot(name) {
+    let i = slots.get(name); if (i !== undefined) return i;
+    const src = Pics.src.get(name); if (!src || next >= COLS * COLS) return -1;
+    i = next++; slots.set(name, i); put(name, i); return i;
+  }
+  function put(name, i) { const src = Pics.src.get(name); if (!src) return; const [x, y] = origin(i); try { ag.clearRect(x, y, CELL, CELL); ag.drawImage(src, x + PAD, y + PAD, IN, IN); dirty = true; } catch (_) {} }
+  function build() {
+    gl = can.getContext("webgl", { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, failIfMajorPerformanceCaveat: !FORCEGL }); if (!gl) return false;
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error("shader"); return s; };
+    prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog); if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error("link");
+    gl.useProgram(prog); buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); const B = STRIDE * 4;
+    [["p", 2, 0], ["t", 2, 8], ["c", 4, 16], ["w", 1, 32]].forEach(([nm, sz, off]) => { const loc = gl.getAttribLocation(prog, nm); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, sz, gl.FLOAT, false, B, off); });
+    uRes = gl.getUniformLocation(prog, "res"); tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.clearColor(0, 0, 0, 0); dirty = true; return true;
+  }
+  function init(onLose) {
+    try {
+      onLost = onLose; can = document.createElement("canvas"); can.id = "fxgl"; can.setAttribute("aria-hidden", "true");
+      atlas = document.createElement("canvas"); atlas.width = atlas.height = SIZE; ag = atlas.getContext("2d"); SHAPES.forEach((s, i) => shape(s, i)); next = SHAPES.length;
+      if (!build()) return false;
+      // the chip can be taken away for a moment (the app was put away, the phone ran short of memory): draw the old way meanwhile, and come back when it returns
+      can.addEventListener("webglcontextlost", e => { e.preventDefault(); ok = false; if (onLost) onLost(false); });
+      can.addEventListener("webglcontextrestored", () => { try { ok = build(); } catch (_) { ok = false; } if (ok && onLost) onLost(true); });
+      document.body.appendChild(can); ok = true; return true;
+    } catch (_) { ok = false; return false; }
+  }
+  function fit(w, h, d) { if (!ok) return; W = w; H = h; can.width = Math.round(w * d); can.height = Math.round(h * d); gl.viewport(0, 0, can.width, can.height); }
+  function begin() { n = 0; }
+  // one square: slot = which picture, (x, y) = its middle, w and h = its size, rot = turned by; colour 0..1; add = its light adds up; wh = how far towards pure white
+  function spr(s, x, y, w, h, rot, r, g, b, a, add, wh) {
+    if (s < 0 || n >= MAXS) return; const cs = rot ? Math.cos(rot) : 1, sn = rot ? Math.sin(rot) : 0, hw = w / 2, hh = h / 2, [ox, oy] = origin(s);
+    const u0 = (ox + PAD) / SIZE, v0 = (oy + PAD) / SIZE, u1 = (ox + CELL - PAD) / SIZE, v1 = (oy + CELL - PAD) / SIZE;
+    vert(x - hw * cs + hh * sn, y - hw * sn - hh * cs, u0, v0, x + hw * cs + hh * sn, y + hw * sn - hh * cs, u1, v0, x + hw * cs - hh * sn, y + hw * sn + hh * cs, u1, v1, x - hw * cs - hh * sn, y - hw * sn + hh * cs, u0, v1, r, g, b, a, add, wh);
+  }
+  // a square that is not turned, showing only part of its picture (ua..ub across, 0..1): used for the bars of light and the screen flash
+  function rect(s, x0, y0, x1, y1, ua, ub, r, g, b, a, add, turn) {
+    if (s < 0 || n >= MAXS || x1 <= x0 || y1 <= y0) return; const [ox, oy] = origin(s), m = s === 8 ? 24 : PAD;
+    const A = (ox + m + (CELL - 2 * m) * ua) / SIZE, Bq = (ox + m + (CELL - 2 * m) * ub) / SIZE, v0 = (oy + m) / SIZE, v1 = (oy + CELL - m) / SIZE;
+    if (turn) vert(x0, y0, A, v0, x1, y0, A, v1, x1, y1, Bq, v1, x0, y1, Bq, v0, r, g, b, a, add, 0);   // the picture runs down the screen instead of across
+    else vert(x0, y0, A, v0, x1, y0, Bq, v0, x1, y1, Bq, v1, x0, y1, A, v1, r, g, b, a, add, 0);
+  }
+  function vert(ax, ay, au, av, bx, by, bu, bv, cx, cy, cu, cv, dx, dy, du, dv, r, g, b, a, add, wh) {
+    const R = r * a, G = g * a, Bc = b * a, Al = add ? 0 : a, w = wh || 0; let o = n * 6 * STRIDE;
+    const P = [ax, ay, au, av, bx, by, bu, bv, cx, cy, cu, cv, ax, ay, au, av, cx, cy, cu, cv, dx, dy, du, dv];
+    for (let k = 0; k < 24; k += 4) { V[o++] = P[k]; V[o++] = P[k + 1]; V[o++] = P[k + 2]; V[o++] = P[k + 3]; V[o++] = R; V[o++] = G; V[o++] = Bc; V[o++] = Al; V[o++] = w; }
+    n++;
+  }
+  function end() {
+    if (!ok) return;
+    if (dirty) { gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlas); dirty = false; }
+    gl.clear(gl.COLOR_BUFFER_BIT); if (!n) return;
+    gl.uniform2f(uRes, W, H); gl.bufferData(gl.ARRAY_BUFFER, V.subarray(0, n * 6 * STRIDE), gl.DYNAMIC_DRAW); gl.drawArrays(gl.TRIANGLES, 0, n * 6);
+  }
+  return { init, fit, begin, spr, rect, end, slot, on: () => ok, shapeIx: name => SHAPES.indexOf(name), changed(name) { const i = slots.get(name); if (i !== undefined && ag) put(name, i); }, info: () => ok ? (gl.getParameter(gl.VERSION) + "") : "off" };
+})();
+
 // ---- sparkle and shatter effects ----
 // One see-through canvas lies over the whole screen. Every effect is made of small moving bits (shards, sparks, twinkles, coins, tiny
 // gems). There is a hard cap on how many exist at once, and the canvas only redraws while something is moving.
 const Fx = (() => {
-  let can = null, g = null, W = 0, H = 0, raf = 0, last = 0, seed = 1234567;
+  let can = null, g = null, W = 0, H = 0, raf = 0, last = 0, seed = 1234567, glOn = false;
   const parts = [], MAX = 150, TAU = Math.PI * 2;
   const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647, rr = (a, b) => a + rnd() * (b - a);
   const lite = () => document.body.classList.contains("lowfx");
   // the canvas covers the whole screen, so its size is most of its cost: 1.25 pixels per point is plenty for small moving bits (1 in low-power mode)
-  function fit() { if (!g) return; const d = Math.min(window.__FXD || (lite() ? 1 : 1.25), window.devicePixelRatio || 1); W = window.innerWidth; H = window.innerHeight; can.width = Math.round(W * d); can.height = Math.round(H * d); g.setTransform(d, 0, 0, d, 0, 0); }
-  function init() { can = $("fx"); try { g = can.getContext("2d"); } catch (_) { g = null; } fit(); window.addEventListener("resize", fit); }
-  function add(p) { if (reduced || !g) return; const cap = lite() ? 48 : MAX; if (parts.length >= cap) { if (lite() && p.k !== 1 && p.k !== 3 && p.k !== 4) return; parts.shift(); } p.t = -(p.delay || 0); parts.push(p); if (!raf) { last = performance.now(); Jank.start(); busy(true); raf = requestAnimationFrame(frame); } }
+  function fit() {
+    W = window.innerWidth; H = window.innerHeight;
+    if (glOn) { GLX.fit(W, H, Math.min(window.__FXD || (lite() ? 1.25 : 2), window.devicePixelRatio || 1)); if (g) { can.width = can.height = 1; } return; }
+    if (!g) return; const d = Math.min(window.__FXD || (lite() ? 1 : 1.25), window.devicePixelRatio || 1); can.width = Math.round(W * d); can.height = Math.round(H * d); g.setTransform(d, 0, 0, d, 0, 0);
+  }
+  // the graphics chip draws when it can (class "gl" on the page tells the style sheet to leave the bursts alone); otherwise the plain canvas does
+  function useGl(on) { glOn = !!on; document.documentElement.classList.toggle("gl", glOn); parts.length = 0; fit(); if (g && !glOn) g.clearRect(0, 0, W, H); if (glOn) { GLX.begin(); GLX.end(); } }
+  function init() {
+    can = $("fx"); try { g = can.getContext("2d"); } catch (_) { g = null; }
+    let chip = false; if (!NOGL) { try { chip = GLX.init(back => useGl(back)); } catch (_) { chip = false; } }
+    useGl(chip); window.addEventListener("resize", fit);
+  }
+  function add(p) { if (reduced || !(g || glOn)) return; const cap = lite() ? (glOn ? 60 : 48) : MAX; if (p.k < 6 && parts.length >= cap) { if (lite() && p.k !== 1 && p.k !== 3 && p.k !== 4) return; const old = parts.findIndex(q => q.k < 6); if (old >= 0) parts.splice(old, 1); } p.t = -(p.delay || 0); parts.push(p); if (!raf) { last = performance.now(); Jank.start(); busy(true); raf = requestAnimationFrame(frame); } }
   // while bits fly, the slow drifting backdrop holds still (nobody notices a cloud stop for a second), so the phone can spend every frame on the effects
   let calm = 0; const busy = on => { clearTimeout(calm); if (on) document.documentElement.classList.add("fxon"); else calm = setTimeout(() => document.documentElement.classList.remove("fxon"), 400); };
   // how smooth a burst of effects really was: every gap between frames while bits are moving is noted, and Perf hears about each burst
   const Jank = { n: 0, long: 0, t: 0, start() { this.n = 0; this.long = 0; this.t = 0; }, note(gap) { if (gap > 250) return; this.n++; if (gap > 34) this.long++; }, end() { if (this.n >= 8 && window.__perfBurst) window.__perfBurst(this.n, this.long); } };
   function frame(now) {
-    const gap = now - last, dt = Math.min(.034, Math.max(0, gap / 1000)); last = now; Jank.note(gap); g.clearRect(0, 0, W, H); const lt = lite();
+    const gap = now - last, dt = Math.min(.034, Math.max(0, gap / 1000)); last = now; Jank.note(gap); const lt = lite();
+    if (glOn) GLX.begin(); else g.clearRect(0, 0, W, H);
     for (let pass = 0; pass < 2; pass++) {   // solid bits first, then the glowing ones, which add their light together
-      g.globalCompositeOperation = pass ? "lighter" : "source-over";
+      if (!glOn) g.globalCompositeOperation = pass ? "lighter" : "source-over";
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i];
         if (!pass) { p.t += dt; if (p.t >= p.life) { parts.splice(i, 1); if (p.done) p.done(); continue; } if (p.t >= 0) move(p, dt); }
-        if (p.t >= 0 && (p.k === 1 || p.k === 2 || p.k === 5) === !!pass) draw(p, lt);
+        if ((p.t >= 0 || p.k === 6) && (p.k === 1 || p.k === 2 || p.k === 5 || p.k === 7) === !!pass) { if (glOn) drawGl(p, lt); else if (p.k < 6) draw(p, lt); }
       }
     }
-    g.globalCompositeOperation = "source-over"; g.globalAlpha = 1;
+    if (glOn) GLX.end(); else { g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; }
     raf = parts.length ? requestAnimationFrame(frame) : 0; if (!raf) { Jank.end(); busy(false); }
   }
   function move(p, dt) {
+    if (p.k >= 6) return;
     if (p.k === 1) { const u = p.t / p.life, e = u * u * (3 - 2 * u), q = 1 - e; p.px = p.x; p.py = p.y; p.x = q * q * p.x0 + 2 * q * e * p.mx + e * e * p.x1; p.y = q * q * p.y0 + 2 * q * e * p.my + e * e * p.y1; return; }
     p.vy += (p.g || 0) * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += (p.vr || 0) * dt;
   }
@@ -3664,9 +3788,38 @@ const Fx = (() => {
       const e = 1 - (1 - u) * (1 - u); g.globalAlpha = 1 - u; g.strokeStyle = p.col; g.lineWidth = p.s * (1 - u) + 1; g.beginPath(); g.arc(p.x, p.y, p.r0 + (p.r1 - p.r0) * e, 0, TAU); g.stroke();
     }
   }
+  // ---- the same bits, drawn by the graphics chip ----
+  const RGB = new Map(), rgbOf = col => { let v = RGB.get(col); if (v) return v; let h = String(col || "#fff").replace("#", ""); if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; const n = parseInt(h, 16); v = h.length === 6 && !isNaN(n) ? [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255] : [1, 1, 1]; RGB.set(col, v); return v; };
+  const DOT = 0, DISC = 1, TRI = 2, HI = 3, STAR = 4, RING = 5, BEAM = 6, COIN = 7, PX = 8, ease = u => 1 - (1 - u) * (1 - u);
+  function drawGl(p, lt) {
+    const u = Math.max(0, p.t / p.life), S = GLX.spr;
+    if (p.k === 0) { const c = rgbOf(p.col), a = 1 - u * u, z = p.s * 2; S(TRI, p.x, p.y, z, z, p.rot, c[0], c[1], c[2], a, 0, 0); if (!lt) S(HI, p.x, p.y, z, z, p.rot, 1, 1, 1, a * .6, 0, 0); }
+    else if (p.k === 1) {
+      const c = rgbOf(p.col), a = Math.min(1, 1.25 - u), dx = p.x - p.px, dy = p.y - p.py, len = Math.hypot(dx, dy), w = p.s * .9;
+      if (len > .5) S(DISC, (p.x + p.px) / 2, (p.y + p.py) / 2, len + w, w, Math.atan2(dy, dx), c[0], c[1], c[2], a, 1, 0);
+      if (!lt) S(DOT, p.x, p.y, p.s * 7, p.s * 7, 0, c[0], c[1], c[2], a * .55, 1, 0);
+      S(DISC, p.x, p.y, p.s * 2, p.s * 2, 0, 1, 1, 1, a, 1, 0);
+    } else if (p.k === 2) { const c = rgbOf(p.col), z = p.s * Math.sin(Math.PI * u) * 2; S(STAR, p.x, p.y, z, z, p.rot, c[0], c[1], c[2], Math.min(1, 2 - 2 * u), 1, 0); }
+    else if (p.k === 3) S(COIN, p.x, p.y, Math.max(1.5, Math.abs(Math.cos(p.rot)) * p.s * 2.2), p.s * 2.3, 0, 1, 1, 1, Math.min(1, 3 - 3 * u), 0, 0);
+    else if (p.k === 4) S(GLX.slot("--g" + p.c), p.x, p.y, p.s, p.s, p.rot, 1, 1, 1, Math.min(1, 3 - 3 * u), 0, 0);
+    else if (p.k === 5) { const c = rgbOf(p.col), e = ease(u), z = (p.r0 + (p.r1 - p.r0) * e) * 2.1; S(RING, p.x, p.y, z, z, 0, c[0], c[1], c[2], 1 - u, 1, 0); }
+    else if (p.k === 6) {   // a cleared gem: swells and turns white, then shrinks away (what the style sheet's "clr" does, without the page doing the work)
+      const e = p.t < 0 ? 0 : ease(u), up = Math.min(1, e / .24), dn = Math.max(0, (e - .24) / .76), z = p.s * (1 + .2 * up - .9 * dn);
+      S(p.slot, p.x, p.y, z, z, 0, 1, 1, 1, 1 - dn, 0, up);
+    } else if (p.k === 7) {   // a bar of light sweeping along a cleared row or column, with a bright line through its middle
+      const q = ease(Math.min(1, p.t / .4)), off = -1.05 + 2.1 * q, k = Math.min(1, p.t / (.18 * p.life)), fade = p.t < .18 * p.life ? k : 1 - (u - .18) / .82, sx = .2 + .8 * k, sy = p.t < .18 * p.life ? 1 : 1 - .9 * (u - .18) / .82;
+      if (p.row) {
+        const b0 = p.x + off * p.w, a0 = Math.max(p.x, b0), a1 = Math.min(p.x + p.w, b0 + p.w); if (p.t < .4) GLX.rect(BEAM, a0, p.y, a1, p.y + p.h, (a0 - b0) / p.w, (a1 - b0) / p.w, 1, 1, 1, 1, 0, 0);
+        const cx = p.x + p.w / 2, cy = p.y + p.h / 2, th = p.h * .28 * sy; S(DOT, cx, cy, p.w * sx * 1.1, th + 26, 0, 1, .93, .67, .7 * fade, 1, 0); S(DISC, cx, cy, p.w * sx, Math.max(1, th), 0, 1, 1, 1, fade, 1, 0);
+      } else {
+        const b0 = p.y + off * p.h, a0 = Math.max(p.y, b0), a1 = Math.min(p.y + p.h, b0 + p.h); if (p.t < .4) GLX.rect(BEAM, p.x, a0, p.x + p.w, a1, (a0 - b0) / p.h, (a1 - b0) / p.h, 1, 1, 1, 1, 0, 1);
+        const cx = p.x + p.w / 2, cy = p.y + p.h / 2, th = p.w * .28 * sy; S(DOT, cx, cy, th + 26, p.h * sx * 1.1, 0, 1, .93, .67, .7 * fade, 1, 0); S(DISC, cx, cy, Math.max(1, th), p.h * sx, 0, 1, 1, 1, fade, 1, 0);
+      }
+    } else if (p.k === 8) { const a = p.a * (1 - ease(u)); GLX.rect(PX, 0, 0, W, H, 0, 1, 1, .94, .75, a * .75, 0, 0); S(DOT, W / 2, H * .45, Math.max(W, H) * 1.5, Math.max(W, H) * 1.5, 0, 1, 1, 1, a * .6, 0, 0); }
+  }
   return {
-    init, fit,
-    count: () => parts.length,
+    init, fit, gl: () => glOn, glInfo: () => GLX.info(),
+    count: k => k == null ? parts.length : parts.filter(p => p.k === k).length,   // how many bits are flying (or how many of one kind)
     // a gem breaks: shards fly out and fall, glitter hangs for a moment
     shatter(r, c, n, delay) {
       const P = Gems.PAL[c] || Gems.PAL[6], x = r.left + r.width / 2, y = r.top + r.height / 2, sz = r.width; const lt = lite(); if (lt) n = Math.ceil(n / 2);
@@ -3686,8 +3839,13 @@ const Fx = (() => {
     shower(n, kind) {
       for (let i = 0; i < n; i++) add({ k: kind === "coin" ? 3 : 4, x: rr(.04, .96) * W, y: rr(-90, -12), vx: rr(-40, 40), vy: rr(120, 330), g: 900, rot: rr(0, TAU), vr: rr(-9, 9), s: kind === "coin" ? rr(7, 11) : rr(18, 30), c: 1 + Math.floor(rnd() * 7), life: rr(1.1, 1.8), delay: rr(0, .5) });
     },
+    // (graphics chip only) a cleared gem flashes white and shrinks; r = where the square is on screen, name = which picture, delay in seconds.
+    // Says false when it cannot draw it, and the style sheet's own animation is used instead.
+    gem(r, name, delay) { if (!glOn || reduced) return false; const sl = GLX.slot(name); if (sl < 0) return false; add({ k: 6, slot: sl, x: r.left + r.width / 2, y: r.top + r.height / 2, s: r.width * 1.12, life: .3, delay: delay || 0 }); return true; },
+    // (graphics chip only) the bar of light along a cleared row or column
+    beam(x, y, w, ht, row) { if (!glOn || reduced) return false; add({ k: 7, x, y, w, h: ht, row: !!row, life: .45 }); return true; },
     // a quick white flash over the whole screen
-    flash(a) { const f = $("flash"); if (reduced || !f || lite()) return; f.style.setProperty("--a", a); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); }
+    flash(a) { const f = $("flash"); if (reduced || !f || lite()) return; if (glOn) { add({ k: 8, a: +a || .3, life: .42 }); return; } f.style.setProperty("--a", a); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go"); }
   };
 })();
 
@@ -4281,13 +4439,15 @@ function wipe(idxs, origin, pow) {
   // three passes, so the browser re-measures the board ONCE per clear and not twice per gem: set every cell up, read every position, then start every burst
   const ds = idxs.map(ix => { const d = (Math.abs((ix >> 3) - (origin >> 3)) + Math.abs((ix & 7) - (origin & 7))) * 16, c = cells[ix]; if (d > max) max = d; c.style.setProperty("--d", d + "ms"); c.classList.remove("pop", "clr"); return d; });
   const boxes = idxs.map(ix => cells[ix].getBoundingClientRect());
-  idxs.forEach((ix, n) => { const c = cells[ix], col = +c.dataset.c; c.classList.add("clr"); if (col) Fx.shatter(boxes[n], col, per, ds[n] / 1000 + .06); });
+  // with the graphics chip, it draws the gem flashing white and shrinking (class "glc" hides the page's own gem at once); otherwise the style sheet animates it
+  idxs.forEach((ix, n) => { const c = cells[ix], col = +c.dataset.c, k = +c.dataset.k || 0; c.classList.toggle("glc", !!col && !c.dataset.f && Fx.gem(boxes[n], k >= 2 ? "--k" + k : "--g" + col, ds[n] / 1000)); c.classList.add("clr"); if (col) Fx.shatter(boxes[n], col, per, ds[n] / 1000 + .06); });
   setTimeout(() => idxs.forEach(ix => { const c = cells[ix]; if (!c.classList.contains("clr")) return; c.classList.remove("clr"); cellNow(ix); }), (reduced ? 0 : 340) + max);
 }
 // a bar of light sweeps along each cleared row and column
 function zap(rows, cols) {
   if (reduced || !(rows.length + cols.length)) return;
   const a = cells[0], z = cells[63], x0 = a.offsetLeft, y0 = a.offsetTop, w = z.offsetLeft + z.offsetWidth - x0, ht = z.offsetTop + z.offsetHeight - y0;
+  if (Fx.gl()) { const A = a.getBoundingClientRect(), Z = z.getBoundingClientRect(), W = Z.right - A.left, Ht = Z.bottom - A.top; rows.forEach(r => Fx.beam(A.left, A.top + r * Ht / N, W, Ht / N, true)); cols.forEach(c => Fx.beam(A.left + c * W / N, A.top, W / N, Ht, false)); return; }
   const line = (k, row) => {
     const c = cells[row ? k * N : k], n = h("div", "sweep" + (row ? "" : " col"));
     n.style.cssText = row ? `left:${x0}px;top:${c.offsetTop}px;width:${w}px;height:${c.offsetHeight}px` : `left:${c.offsetLeft}px;top:${y0}px;width:${c.offsetWidth}px;height:${ht}px`;
@@ -5132,7 +5292,7 @@ const Tiles = (() => {
   function star(g, x, y, r) { g.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, q = i % 2 ? r * .42 : r; g.lineTo(x + q * Math.cos(a), y + q * Math.sin(a)); } g.closePath(); g.fill(); }
   function mover(g, d) { block(g, ["#C4D4FF", "#5E77D8", "#232F7E"]); g.save(); g.translate(56, 56); g.rotate(d * Math.PI / 2); g.translate(-56, -56); ink(g, () => { g.moveTo(34, 40); g.lineTo(52, 56); g.lineTo(34, 72); g.moveTo(58, 40); g.lineTo(76, 56); g.lineTo(58, 72); }); g.restore(); }
   function init() {
-    const make = (k, fn) => { try { const c = document.createElement("canvas"); c.width = c.height = Z; fn(c.getContext("2d")); Pics.set("--k" + k, c.toDataURL()); } catch (_) {} };
+    const make = (k, fn) => { try { const c = document.createElement("canvas"); c.width = c.height = Z; fn(c.getContext("2d")); Pics.set("--k" + k, c.toDataURL(), c); } catch (_) {} };
     Object.keys(ART).forEach(k => make(k, ART[k]));
     for (let d = 0; d < 4; d++) make(20 + d, g => mover(g, d));
   }
@@ -6326,7 +6486,7 @@ document.addEventListener("visibilitychange", () => { Sfx.hush(document.hidden);
 /* ================= polish.js: everything that makes it feel like a finished app =================
    splash and first-time flow, save backups and recovery, achievements, profile, odds page, friendly empty/error states,
    accessibility switches, legal and about pages, play-stats (analytics) behind one module, live config, seasons, offline, low-power mode. */
-const QS = (() => { try { return location.search || ""; } catch (e) { return ""; } })(), QUICK = /[?&]quick\b/.test(QS), SKIPOB = /[?&]skipob\b/.test(QS), NOACH = /[?&]noach\b/.test(QS), NOPICS = /[?&]nopics\b/.test(QS);   // test switches: no splash wait, no first-time flow, no achievement rewards, keep the long picture addresses
+const QS = (() => { try { return location.search || ""; } catch (e) { return ""; } })(), QUICK = /[?&]quick\b/.test(QS), SKIPOB = /[?&]skipob\b/.test(QS), NOACH = /[?&]noach\b/.test(QS), NOPICS = /[?&]nopics\b/.test(QS), FORCEGL = /[?&]gl=force\b/.test(QS), NOGL = /[?&]gl=off\b/.test(QS);   // test switches: no splash wait, no first-time flow, no achievement rewards, keep the long picture addresses
 const T0 = Date.now();
 
 /* ---- splash: the logo, a little robot, and a bar that follows the real loading steps ---- */
@@ -6579,7 +6739,7 @@ const Season = {
   daysLeft() { if (!this.cur) return 0; const [y, m, d] = this.cur.to.split("-").map(Number); return Math.max(0, Math.ceil((new Date(y, m - 1, d, 23, 59, 59).getTime() - Live.now()) / 86400000)); },
   tint(t) {
     if (!t && !this.tinted) return; this.tinted = !!t;
-    for (let c = 1; c <= 7; c++) { const src = Gems.cv[c]; if (!src) continue; try { let url; if (t) { const cv = document.createElement("canvas"); cv.width = src.width; cv.height = src.height; const g = cv.getContext("2d"); g.drawImage(src, 0, 0); g.globalCompositeOperation = "source-atop"; g.fillStyle = `rgba(${t[0]},${t[1]},${t[2]},${t[3]})`; g.fillRect(0, 0, cv.width, cv.height); url = cv.toDataURL("image/png"); } else url = src.toDataURL("image/png"); Pics.set("--g" + c, url); } catch (e) {} }
+    for (let c = 1; c <= 7; c++) { const src = Gems.cv[c]; if (!src) continue; try { let url, pic = src; if (t) { const cv = document.createElement("canvas"); pic = cv; cv.width = src.width; cv.height = src.height; const g = cv.getContext("2d"); g.drawImage(src, 0, 0); g.globalCompositeOperation = "source-atop"; g.fillStyle = `rgba(${t[0]},${t[1]},${t[2]},${t[3]})`; g.fillRect(0, 0, cv.width, cv.height); url = cv.toDataURL("image/png"); } else url = src.toDataURL("image/png"); Pics.set("--g" + c, url, pic); } catch (e) {} }
   },
   apply() {
     const m = S.meta, s = m.season ? this.find() : null, was = this.cur ? this.cur.id : "";
@@ -6713,14 +6873,47 @@ const Perf = {
   // after every burst of effects (a line clear, a pack opening): how many frames it drew and how many came late.
   // Two choppy bursts in a row switch to smooth mode for good on this phone (Settings can still force it either way).
   burst(n, late) {
-    this.bursts++; if (this.off || this.why === "burst") return; const mode = S.meta ? S.meta.lowp : 0; if (mode) return;
+    this.bursts++; this.last.push(n + "/" + late); if (this.last.length > 6) this.last.shift(); if (this.off || this.why === "burst") return; const mode = S.meta ? S.meta.lowp : 0; if (mode) return;
     if (late >= 4 && late / n >= .2) this.bad++; else this.bad = Math.max(0, this.bad - 1);
     if (this.bad >= 2) { this.set(true, false, "burst"); try { localStorage.setItem("packstack.smooth", "1"); } catch (e) {} }
   },
   sample() { if (this.off || document.hidden) return; let n = 0, t0 = 0; const tick = t => { if (!n) t0 = t; if (++n < 46) requestAnimationFrame(tick); else this.feed((t - t0) / 45); }; requestAnimationFrame(tick); },
-  apply() { const mode = S.meta.lowp; if (mode === 1) this.set(true, true); else if (mode === 2) { this.set(false, true); try { localStorage.removeItem("packstack.smooth"); } catch (e) {} } else { let k = null; try { k = localStorage.getItem("packstack.smooth"); } catch (e) {} if (k && !this.off) this.set(true, true, "burst"); } }
+  apply() { const mode = S.meta.lowp; if (mode === 1) this.set(true, true); else if (mode === 2) { this.set(false, true); try { localStorage.removeItem("packstack.smooth"); } catch (e) {} } else { let k = null; try { k = localStorage.getItem("packstack.smooth"); } catch (e) {} if ((k || APP && !Fx.gl()) && !this.off) this.set(true, true, "burst"); } },   // inside the app, Automatic starts light when the graphics chip cannot draw the effects: its built-in browser is slower than Chrome
+  last: []
 };
 window.__perfBurst = (n, late) => Perf.burst(n, late);
+
+/* ---- speed test (Settings > Performance): a few seconds of each kind of drawing, measured on this phone ----
+   quiet = nothing moving (shows the screen's own speed) | sparkles = the effects canvas | tiles = glow-and-fade squares the heavy way and
+   the light way | cards = cards flying in | page work and maths = how fast the phone changes the page and counts */
+const Bench = {
+  busy: false, text: "",
+  gaps(ms) { return new Promise(res => { const g = []; let last = 0, t0 = 0; const f = t => { if (last) g.push(t - last); else t0 = t; last = t; if (t - t0 < ms) requestAnimationFrame(f); else res(g); }; requestAnimationFrame(f); }); },
+  stat(g) { g = g.slice(2); const n = g.length || 1, sum = g.reduce((a, b) => a + b, 0) || 1, s = g.slice().sort((a, b) => a - b), med = s[n >> 1] || 16.7; return { fps: Math.round(1000 * n / sum), med, late: g.filter(x => x > med * 1.5 + 2).length, worst: Math.round(s[s.length - 1] || 0), n }; },
+  line(name, r) { return name + ": " + r.fps + " fps, " + r.late + " of " + r.n + " late, worst " + r.worst + " ms"; },
+  async run() {
+    if (this.busy) return; this.busy = true; const out = [], W = innerWidth, H = innerHeight, box = document.createElement("div");
+    box.style.cssText = "position:fixed;inset:0;z-index:70;display:grid;place-content:center;gap:6px;background:rgba(5,9,18,.92);color:#fff;font:700 15px var(--font-ui);text-align:center"; box.innerHTML = '<p id="benchSay">Speed test: 10 seconds...</p><div id="benchPad" style="display:grid;grid-template-columns:repeat(8,34px);gap:2px;justify-content:center"></div>'; document.body.appendChild(box);
+    const pad = box.lastChild, say = t => { box.firstChild.textContent = t; };
+    try {
+      const quiet = this.stat(await this.gaps(1200)); out.push(this.line("Quiet", quiet));
+      say("Sparkles..."); const tm = setInterval(() => { for (let i = 0; i < 6; i++) Fx.shatter({ left: Math.random() * W, top: H * (.2 + Math.random() * .6), width: 40, height: 40 }, 1 + i, 4, 0); Fx.burst(W / 2, H / 2, 10, ["#FFE894", "#fff"], 260); }, 140);
+      out.push(this.line("Sparkles", this.stat(await this.gaps(1500)))); clearInterval(tm); await this.gaps(700);
+      const tiles = async (name, kf) => { say(name + "..."); pad.innerHTML = Array.from({ length: 24 }, (_, i) => `<i style="width:34px;height:34px;background:var(--g${1 + i % 7}) center/contain no-repeat;animation:${kf} .45s ${i * 12}ms ease-out infinite"></i>`).join(""); const r = this.stat(await this.gaps(1500)); pad.innerHTML = ""; out.push(this.line(name, r)); await this.gaps(300); };
+      await tiles("Tiles heavy", "clr"); await tiles("Tiles light", "clr-lite");
+      say("Cards..."); pad.style.gridTemplateColumns = "repeat(4,64px)"; pad.innerHTML = Array.from({ length: 8 }, (_, i) => `<i style="--i:${i % 3};width:64px;height:90px;border-radius:8px;border:2px solid #000;background:linear-gradient(135deg,#F7F9FF,#9AA6BF 32%,#E6EBF7 50%,#727E98 74%,#C3CCE0);animation:flyout .5s ${i * 60}ms ease-out infinite alternate"></i>`).join("");
+      out.push(this.line("Cards", this.stat(await this.gaps(1500)))); pad.innerHTML = "";
+      let t0 = performance.now(); for (let k = 0; k < 40; k++) { pad.innerHTML = Array.from({ length: 64 }, (_, i) => `<i class="c${k}" style="width:20px;height:20px">${i}</i>`).join(""); void pad.offsetHeight; } const dom = performance.now() - t0; pad.innerHTML = "";
+      t0 = performance.now(); let x = 0; for (let i = 0; i < 3e6; i++) x += Math.sqrt(i) % 7; const js = performance.now() - t0;
+      out.push("Page work " + Math.round(dom) + " ms, maths " + Math.round(js) + " ms");
+      const ua = navigator.userAgent, cv = /Chrome\/([\d.]+)/.exec(ua), fx = $("fx");
+      out.push("Screen " + Math.round(1000 / quiet.med) + " Hz, " + W + "x" + H + " @" + (devicePixelRatio || 1).toFixed(2) + ", effects drawn by " + (Fx.gl() ? "graphics chip (" + Fx.glInfo() + ")" : "plain canvas " + (fx ? fx.width + "x" + fx.height : "")));
+      out.push((APP ? "App build " + (Native.info.build || "?") : "Web") + ", v" + GAME.version + ", engine " + (cv ? cv[1] : "?") + (/; wv\)/.test(ua) ? " WebView" : "") + ", light effects " + (Perf.on ? "ON (" + Perf.why + ")" : "off") + ", setting " + ["Automatic", "Always", "Never"][S.meta.lowp || 0]);
+      out.push("Last bursts (frames/late): " + (Perf.last.join(" ") || "none yet"));
+    } catch (e) { out.push("Stopped: " + (e && e.message || e)); }
+    box.remove(); this.busy = false; this.text = out.join("\n"); if (view === "menu") { const el = $("benchOut"); if (el) { el.hidden = false; el.textContent = this.text; try { el.scrollIntoView({ block: "center" }); } catch (e) {} } }
+  }
+};
 setInterval(() => Perf.sample(), 9000);
 
 /* ---- offline: a service worker keeps the whole game on the phone. It can only be installed when the game is served from its own
@@ -6757,7 +6950,7 @@ function settingsExtra() {
   const m = S.meta, sw = (key, label, on) => `<button class="sw" data-act="${key === "anOk" ? "an-toggle" : "set"}" data-id="${key}" type="button" role="switch" aria-checked="${on}"><span>${label}</span><b>${on ? "on" : "off"}</b></button>`;
   const seg = (key, opts, label, cur) => `<div class="seg" role="radiogroup" aria-label="${label}">${opts.map((t, i) => `<button class="segb" data-act="num" data-id="${key}" data-v="${i}" type="button" role="radio" aria-checked="${cur === i}">${t}</button>`).join("")}</div>`;
   return `<section class="mn" id="mnAccess"><h3>Accessibility</h3><div class="sws">${sw("big", "Large text", !!m.big)}${sw("hc", "High contrast", !!m.hc)}</div><p class="note">Gems are told apart by shape as well as colour (seven different cuts), so nothing depends on colour alone. Left-handed layout and Reduced motion are just above.</p></section>` +
-    `<section class="mn" id="mnPerf"><h3>Performance</h3><p class="note">Low-power mode uses lighter effects so the game stays smooth. Automatic turns it on by itself if line clears or pack openings stutter on this phone.</p>${seg("lowp", ["Automatic", "Always", "Never"], "Low-power mode", m.lowp)}<div class="sws" style="margin-top:8px">${sw("season", "Seasonal looks", !!m.season)}</div></section>` +
+    `<section class="mn" id="mnPerf"><h3>Performance</h3><p class="note">Low-power mode uses lighter effects so the game stays smooth. Automatic turns it on by itself if line clears or pack openings stutter on this phone.</p>${seg("lowp", ["Automatic", "Always", "Never"], "Low-power mode", m.lowp)}<div class="row" style="margin-top:8px"><button class="btn" data-act="bench" type="button">Run speed test</button></div><pre class="note" id="benchOut" style="white-space:pre-wrap;text-align:left;font-size:11.5px;user-select:text"${Bench.text ? "" : " hidden"}>${esc(Bench.text)}</pre><div class="sws" style="margin-top:8px">${sw("season", "Seasonal looks", !!m.season)}</div></section>` +
     `<section class="mn" id="mnPrivacy"><h3>Privacy</h3><div class="sws">${sw("anOk", "Keep play stats on this phone", m.anOk === 1)}</div><p class="note">No name, contacts or location. Used to see which levels are too hard.</p><div class="row"><button class="btn" data-act="tab" data-id="legal-privacy" type="button">Privacy Policy</button><button class="btn" data-act="tab" data-id="legal-terms" type="button">Terms</button><button class="btn" data-act="tab" data-id="legal-data" type="button">Your data</button>${APP && Native.ads ? `<button class="btn" data-act="ad-privacy" type="button">Ad privacy choices</button>` : ""}</div></section>` +
     `<section class="mn" id="mnAbout"><h3>About<span>version ${GAME.version}</span></h3><div class="row"><button class="btn" data-act="tab" data-id="about" type="button">About and credits</button><button class="btn" data-act="tab" data-id="report" type="button">Report a problem</button><button class="btn" data-act="tab" data-id="odds" type="button">Pack odds</button></div></section>`;
 }
@@ -6784,6 +6977,7 @@ function polishAct(a, id, b) {
   else if (a === "rep-copy") copyText($("repCode").value, "Report copied. Paste it into an email.");
   else if (a === "dev-clear") { Analytics.clear(); viewDev(); }
   else if (a === "dev-low") { Perf.set(!Perf.on, true); viewDev(); }
+  else if (a === "bench") Bench.run();
   else if (a === "dev-break") { try { localStorage.setItem(KEY, "{\"meta\":{\"cards\":{\"bolt\":3"); } catch (e) {} noSave = true; location.reload(); }
   else if (a === "an-toggle") { m.anOk = m.anOk === 1 ? 2 : 1; if (m.anOk !== 1) Analytics.clear(); save(); b.setAttribute("aria-checked", m.anOk === 1); b.lastElementChild.textContent = m.anOk === 1 ? "on" : "off"; }
   else if (a === "pass-claim") { const r = Season.claim(+id); if (r) { Sfx.buy(); Haptic.play("pack"); toast("Collected: " + rewardWord(r) + "."); save(); renderHub(); viewSeason(); } }
@@ -6809,7 +7003,7 @@ function afterBoot() {
   document.addEventListener("focusin", e => { if (e.target.matches && e.target.matches("input,textarea")) setTimeout(() => { try { e.target.scrollIntoView({ block: "center" }); } catch (x) {} }, 250); });
   window.addEventListener("pagehide", () => { Analytics.sessionEnd(); });
 }
-window.__ps = { ready: false, S, Core, Camp, Levels, LV, Scene, Bots, GAME, Skin, Pics, Music, Radio, musicTrack, Splash, Safe, Analytics, Ach, Haptic, First, Live, Season, Perf, Offline, Store, AdService, AdLog, musicMode, feel, boardFx, goalSentence, robotHelp, robotRescue, RB, robotTick, offerRobots, showGetMore, chgSay, crewTap, Hub: { goHub, goPlay, tab: openSheet, start: startLevel, state: () => ({ screen, mode, view, pop: !popEl.hidden }) }, Cloud, Shop, Sfx, Fx, Gems, Fresh, save, bot, cardInner, place: doPlace, disarm, newRun, endRun, Endless, Shop, EX, contState, continueRun, renderCont, open: openSheet, close: closeSheet, redraw: () => renderAll(), check: () => afterAction(), hint: () => { renderHint(); return $("hint").textContent; }, uiRole, showNews, Out };
+window.__ps = { ready: false, S, Core, Camp, Levels, LV, Scene, Bots, GAME, Skin, Pics, Music, Radio, musicTrack, Splash, Safe, Analytics, Ach, Haptic, First, Live, Season, Perf, Bench, Offline, Store, AdService, AdLog, musicMode, feel, boardFx, goalSentence, robotHelp, robotRescue, RB, robotTick, offerRobots, showGetMore, chgSay, crewTap, Hub: { goHub, goPlay, tab: openSheet, start: startLevel, state: () => ({ screen, mode, view, pop: !popEl.hidden }) }, Cloud, Shop, Sfx, Fx, Gems, Fresh, save, bot, cardInner, place: doPlace, disarm, newRun, endRun, Endless, Shop, EX, contState, continueRun, renderCont, open: openSheet, close: closeSheet, redraw: () => renderAll(), check: () => afterAction(), hint: () => { renderHint(); return $("hint").textContent; }, uiRole, showNews, Out };
 try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ meta: S.meta, run: S.endless, base: S.base, lrun: S.lrun })); } catch (_) {}
 const hotApi = window.claude && window.claude.hot;
 const go = d => start(d || {}).catch(e => Splash.fail(e));
